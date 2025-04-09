@@ -160,12 +160,13 @@ export const getActions = (instance) => {
           required: true,
         },
       ],
-      callback: (event) => {
+      callback: async (event) => {
         const {
           options: { command },
         } = event;
         try {
-          const params = Buffer.from(command);
+          var params = await instance.parseVariablesInString(command)
+          params = Buffer.from(command);
           instance.udp.send(params);
         } catch (error) {
           instance.log("error", "send command error");
