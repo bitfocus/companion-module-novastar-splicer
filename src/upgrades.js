@@ -1,4 +1,4 @@
-import { OLD_ACTION_TO_NEW } from '../utils/constant.js';
+import { OLD_ACTION_TO_NEW, OLD_FEEDBACK_TO_NEW } from '../utils/constant.js';
 
 export const upgradeScripts = [
   /*
@@ -6,7 +6,7 @@ export const upgradeScripts = [
    * Remember that once it has been added it cannot be removed!
    */
   function (context, props) {
-    const { actions } = props;
+    const { actions, feedbacks } = props;
     const result = {
       updatedConfig: null,
       updatedActions: [],
@@ -19,7 +19,12 @@ export const upgradeScripts = [
         result.updatedActions.push(action);
       }
     }
-
+    for (const feedback of feedbacks) {
+      if (OLD_FEEDBACK_TO_NEW[feedback.feedbackId]) {
+        feedback.feedbackId = OLD_FEEDBACK_TO_NEW[feedback.feedbackId];
+        result.updatedFeedbacks.push(feedback);
+      }
+    }
     return result;
   },
 ];

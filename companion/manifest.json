@@ -5,8 +5,8 @@
   "description": "Companion module for the splicer of Novastar",
   "version": "0.0.0",
   "license": "MIT",
-  "repository": "git+git+https://github.com/bitfocus/companion-module-novastar-splicer.git",
-  "bugs": "git+https://github.com/bitfocus/companion-module-novastar-splicer.git/issues",
+  "repository": "git+https://github.com/bitfocus/companion-module-novastar-splicer.git",
+  "bugs": "https://github.com/bitfocus/companion-module-novastar-splicer.git/issues",
   "maintainers": [
     {
       "name": "NovaStar",

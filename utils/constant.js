@@ -71,7 +71,19 @@ export const FTB_CHOICES = [
 
 export const DEFAULT_COMMAND = '[{"cmd":"W041A","screenId":1,"enable":0}]';
 
-export const OLD_ACTION_TO_NEW = [];
+export const OLD_ACTION_TO_NEW = {
+  // v2.0.0 -> v3.0.0 action ID mappings
+  play_preset: 'load_preset',
+  freeze: 'screen_frz_toggle',
+  ftb: 'apply_ftb',
+  brightness: 'screen_brightness_add', // Note: v2.0.0 brightness action mapped to brightness_add
+};
+
+export const OLD_FEEDBACK_TO_NEW = {
+  // v2.0.0 -> v3.0.0 feedback ID mappings
+  freeze: 'screen_frz',
+  ftb: 'ftb_selected',
+};
 
 export const MODULE_NAME = 'companion-module-novastar-splicer';
 
