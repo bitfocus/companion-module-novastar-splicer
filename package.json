@@ -19,7 +19,7 @@
 		"yarn": "^1.22.21"
 	},
 	"devDependencies": {
-		"@companion-module/tools": "^1.4.1",
+		"@companion-module/tools": "^1.5.2",
 		"eslint": "^9.30.1",
 		"eslint-config-prettier": "^10.1.5",
 		"eslint-plugin-prettier": "^5.5.1",
