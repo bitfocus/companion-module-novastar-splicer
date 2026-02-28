@@ -114,6 +114,7 @@ export const getActions = (instance) => {
         const [screenId, presetId] = combineId.split('_').map((item) => Number(item));
         instance.selectedPresetInfo = { screenId, presetId };
         instance.checkFeedbacks();
+        if (!instance.connectStatus) return;
         const command = handleParams(ACTIONS_CMD.load_preset, {
           screenId,
           presetId,
@@ -139,6 +140,7 @@ export const getActions = (instance) => {
         const {
           options: { command },
         } = event;
+        if (!instance.connectStatus) return;
         try {
           const params = Buffer.from(command);
           instance.udp.send(params);
@@ -165,6 +167,7 @@ export const getActions = (instance) => {
         const { presetCollectionId } = action.options;
         instance.selectedPresetCollectionId = presetCollectionId;
         instance.checkFeedbacks();
+        if (!instance.connectStatus) return;
         applyPresetCollection(instance, { presetCollectionId });
       },
     },
@@ -198,6 +201,7 @@ export const getActions = (instance) => {
           takeActive: false,
         };
         instance.checkFeedbacks();
+        if (!instance.connectStatus) return;
         instance.selectedScreenList?.forEach((_screenId) => {
           applyPgmOrPvw(instance, {
             enNonTime,
@@ -234,6 +238,7 @@ export const getActions = (instance) => {
         const { manualPlay } = action.options;
         instance.pgmOrPvwActive.takeActive = manualPlay === 1;
         instance.checkFeedbacks();
+        if (!instance.connectStatus) return;
         instance.selectedScreenList?.forEach((_screenId) => {
           applyPgmOrPvw(instance, {
             enNonTime: 1,
@@ -268,7 +273,12 @@ export const getActions = (instance) => {
       callback: async (action) => {
         const { type } = action.options;
         instance.ftb = !type;
+        // ENHANCED: Optimistic update for per-screen FTB
+        instance.selectedScreenList?.forEach((screenId) => {
+          instance.updateEnhancedFromAction(screenId, 'ftb', !type);
+        });
         instance.checkFeedbacks();
+        if (!instance.connectStatus) return;
         if (!instance.selectedScreenList?.length) return;
         const param = instance.selectedScreenList.map((screenId) => ({ type, screenId }));
         blackScreen(instance, param);
@@ -300,6 +310,7 @@ export const getActions = (instance) => {
         const { isMute } = action.options;
         instance.volumeMute = !isMute;
         instance.checkFeedbacks();
+        if (!instance.connectStatus) return;
         if (!instance.selectedScreenList?.length) return;
         const resList = [];
         //音量批量下发只生效一个，所以需要遍历下发
@@ -353,7 +364,12 @@ export const getActions = (instance) => {
         const { enable } = action.options;
         instance.log('debug', enable);
         instance.screenFRZState = enable;
+        // ENHANCED: Optimistic update for per-screen freeze
+        instance.selectedScreenList?.forEach((screenId) => {
+          instance.updateEnhancedFromAction(screenId, 'frozen', enable === 1);
+        });
         instance.checkFeedbacks();
+        if (!instance.connectStatus) return;
         if (instance.selectedScreenList.length === 0) {
           instance.log('error', 'Please select a screen');
           return;
@@ -368,6 +384,7 @@ export const getActions = (instance) => {
       name: 'Screen Volume Add',
       description: 'Increase the volume of the selected screen.',
       callback: () => {
+        if (!instance.connectStatus) return;
         instance.selectedScreenList?.forEach((screenId) => {
           const curScreenDetails = instance.screenList.find((screen) => screen.screenId === screenId)?.details;
           if (!curScreenDetails) return;
@@ -387,6 +404,7 @@ export const getActions = (instance) => {
       name: 'Screen Volume Minus',
       description: 'Decrease the volume of the selected screen.',
       callback: () => {
+        if (!instance.connectStatus) return;
         instance.selectedScreenList?.forEach((screenId) => {
           const curScreenDetails = instance.screenList.find((screen) => screen.screenId === Number(screenId))?.details;
           if (!curScreenDetails) return;
@@ -412,6 +430,9 @@ export const getActions = (instance) => {
           let brightness = curScreenDetails.brightness;
           brightness = Math.min(brightness + 1, 100);
           curScreenDetails.brightness = brightness;
+          // ENHANCED: Optimistic update for per-screen brightness
+          instance.updateEnhancedFromAction(screenId, 'brightness', brightness);
+          if (!instance.connectStatus) return;
           const command = handleParams(ACTIONS_CMD.apply_screen_brightness, {
             screenId,
             brightness: brightness,
@@ -430,6 +451,9 @@ export const getActions = (instance) => {
           let brightness = curScreenDetails.brightness;
           brightness = Math.max(brightness - 1, 0);
           curScreenDetails.brightness = brightness;
+          // ENHANCED: Optimistic update for per-screen brightness
+          instance.updateEnhancedFromAction(screenId, 'brightness', brightness);
+          if (!instance.connectStatus) return;
           const command = handleParams(ACTIONS_CMD.apply_screen_brightness, {
             screenId,
             brightness: brightness,
@@ -466,6 +490,7 @@ export const getActions = (instance) => {
         instance.log('debug', action.options);
         instance.layerFRZState = enable;
         instance.checkFeedbacks();
+        if (!instance.connectStatus) return;
         if (!instance.selectedLayerInfo) {
           instance.log('error', 'Please select a layer');
           return;
@@ -498,6 +523,7 @@ export const getActions = (instance) => {
         const source = instance.sourceList?.find((_item) => id === `${_item.inputId}_${_item.cropId}`);
         instance.selectedSourceId = id;
         instance.checkFeedbacks();
+        if (!instance.connectStatus) return;
         if (!source || !instance.selectedLayerInfo) return;
         instance.udp.send(
           handleParams(ACTIONS_CMD.source_switch, {
@@ -539,7 +565,12 @@ export const getActions = (instance) => {
       callback: async (action) => {
         const { testPattern } = action.options;
         instance.testPattern = testPattern === TEST_PATTERN_TYPE.OPEN;
+        // ENHANCED: Optimistic update for per-screen test pattern
+        instance.selectedScreenList?.forEach((screenId) => {
+          instance.updateEnhancedFromAction(screenId, 'testPattern', testPattern === TEST_PATTERN_TYPE.OPEN);
+        });
         instance.checkFeedbacks();
+        if (!instance.connectStatus) return;
         //目前的协议只支持遍历通过接口修改测试画面，后续协议支持按照屏幕修改后调整
         for (const screenId of instance.selectedScreenList) {
           const requests = [];
@@ -608,7 +639,12 @@ export const getActions = (instance) => {
       callback: (action) => {
         const { enable } = action.options;
         instance.bkgEnable = !!enable;
+        // ENHANCED: Optimistic update for per-screen BKG
+        instance.selectedScreenList?.forEach((screenId) => {
+          instance.updateEnhancedFromAction(screenId, 'bkg', !!enable);
+        });
         instance.checkFeedbacks();
+        if (!instance.connectStatus) return;
         if (!instance.selectedScreenList?.length) return;
         const requests = [];
         instance.selectedScreenList?.forEach((screenId) => {
@@ -679,7 +715,13 @@ export const getActions = (instance) => {
         } else {
           instance.textOsdEnable = !!enable;
         }
+        // ENHANCED: Optimistic update for per-screen OSD
+        const prop = osdType === 'image' ? 'osdImage' : 'osdText';
+        instance.selectedScreenList?.forEach((screenId) => {
+          instance.updateEnhancedFromAction(screenId, prop, !!enable);
+        });
         instance.checkFeedbacks();
+        if (!instance.connectStatus) return;
         if (!instance.selectedScreenList?.length) return;
         const requests = [];
         instance.selectedScreenList?.forEach((screenId) => {

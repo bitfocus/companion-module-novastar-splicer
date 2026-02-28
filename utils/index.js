@@ -114,8 +114,8 @@ export const sendUDPRequestsAll = async (instance, requests) => {
 /** 生成屏幕的变量 */
 export const formatScreenVariable = (list) => {
   const screensArr = list.map((item) => ({
-    variableId: `screenId_${item.screenId}`,
-    name: `Screen ID: ${item.screenId}`,
+    variableId: `screen_${item.screenId + 1}`,
+    name: `Screen ${item.screenId + 1}`,
     value: item.name,
   }));
   const screensObj = {};
@@ -134,10 +134,10 @@ export const formatLayerVariable = (screenList) => {
   const layersObj = {};
   screenList?.forEach((screen) => {
     (screen.layers || []).forEach((layer) => {
-      const variableId = `screenId_${screen.screenId}_layerId_${layer.layerId}`;
+      const variableId = `screen_${screen.screenId + 1}_layer_${layer.layerId + 1}`;
       layersArr.push({
         variableId,
-        name: `Layer ID: ${variableId}`,
+        name: `Screen ${screen.screenId + 1} Layer ${layer.layerId + 1}`,
         value: layer.name,
       });
       layersObj[variableId] = layer.name;
@@ -155,10 +155,10 @@ export const formatPresetVariable = (screenList) => {
   const presetsObj = {};
   screenList?.forEach((screen) => {
     (screen.presets || []).forEach((preset) => {
-      const variableId = `screenId_${screen.screenId}_presetId_${preset.presetId}`;
+      const variableId = `screen_${screen.screenId + 1}_preset_${preset.presetId + 1}`;
       presetsArr.push({
         variableId,
-        name: `Preset ID: ${variableId}`,
+        name: `Screen ${screen.screenId + 1} Preset ${preset.presetId + 1}`,
         value: preset.name,
       });
       presetsObj[variableId] = preset.name;
@@ -173,8 +173,8 @@ export const formatPresetVariable = (screenList) => {
 export const formatPresetCollectionVariable = (presetCollectionList) => {
   const presetCollectionVariables =
     presetCollectionList?.map(({ name, presetCollectionId }) => ({
-      variableId: `presetCollectionId_${presetCollectionId}`,
-      name: `Preset Group: ${presetCollectionId}`,
+      variableId: `presetCollectionId_${presetCollectionId + 1}`,
+      name: `Preset Group ${presetCollectionId + 1}`,
       value: name,
     })) || [];
   const presetCollectionVariableObj = {};
@@ -190,8 +190,8 @@ export const formatPresetCollectionVariable = (presetCollectionList) => {
 export const formatSourceVariable = (sourceList) => {
   const sourceVariables =
     sourceList?.map(({ name, inputId, cropId }) => ({
-      variableId: `source_${inputId}_${cropId}`,
-      name: `Source: ${inputId}_${cropId}`,
+      variableId: `source_${inputId + 1}_${cropId}`,
+      name: `Source ${inputId + 1}`,
       value: name,
     })) || [];
   const sourceVariableObj = {};

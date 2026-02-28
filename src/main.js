@@ -84,7 +84,158 @@ class ModuleInstance extends InstanceBase {
     });
     /** 加载的场景信息 */
     this.selectedPresetInfo = null;
+
+    // ========== ENHANCED: Per-screen direct state ==========
+    this.enhancedState = {
+      screens: {},
+    };
   }
+
+  // ========== ENHANCED: Per-screen state management ==========
+
+  /** Initialize enhanced state for a screen with defaults */
+  initEnhancedScreen(screenId) {
+    this.enhancedState.screens[screenId] = {
+      frozen: false,
+      ftb: false,
+      bkg: false,
+      osdText: false,
+      osdImage: false,
+      brightness: 100,
+      testPattern: false,
+    };
+  }
+
+  /** Update enhanced state from R0401 screen details response */
+  updateEnhancedFromDetails(screenId, details) {
+    if (!this.enhancedState.screens[screenId]) {
+      this.initEnhancedScreen(screenId);
+    }
+    const state = this.enhancedState.screens[screenId];
+    if (details.brightness !== undefined) state.brightness = details.brightness;
+    if (details.screenFrz !== undefined) state.frozen = details.screenFrz === 1;
+    // FTB inverted logic: blackout 0 = FTB enabled, 1 = FTB disabled
+    if (details.blackout !== undefined) state.ftb = details.blackout === 0;
+    if (details.bkgEnable !== undefined) state.bkg = details.bkgEnable === 1;
+    if (details.textOsdEnable !== undefined) state.osdText = details.textOsdEnable === 1;
+    if (details.imgOsdEnable !== undefined) state.osdImage = details.imgOsdEnable === 1;
+  }
+
+  /** Optimistic update from action callback for instant feedback */
+  updateEnhancedFromAction(screenId, property, value) {
+    if (!this.enhancedState.screens[screenId]) {
+      this.initEnhancedScreen(screenId);
+    }
+    this.enhancedState.screens[screenId][property] = value;
+    this.checkFeedbacks();
+  }
+
+  /** Generate per-screen enhanced variables */
+  getEnhancedVariables() {
+    const definitions = [];
+    const values = {};
+
+    for (const [screenIdStr, state] of Object.entries(this.enhancedState.screens)) {
+      const screenId = Number(screenIdStr);
+      const screen = this.screenList.find((s) => s.screenId === screenId);
+      const screenName = screen ? screen.name : `Screen ${screenId + 1}`;
+      const prefix = `screen_${screenId + 1}`;
+
+      definitions.push(
+        { variableId: `${prefix}_brightness`, name: `${screenName} Brightness` },
+        { variableId: `${prefix}_frozen`, name: `${screenName} Frozen` },
+        { variableId: `${prefix}_ftb`, name: `${screenName} FTB` },
+        { variableId: `${prefix}_bkg`, name: `${screenName} BKG` },
+        { variableId: `${prefix}_osd_text`, name: `${screenName} OSD Text` },
+        { variableId: `${prefix}_osd_image`, name: `${screenName} OSD Image` },
+        { variableId: `${prefix}_test_pattern`, name: `${screenName} Test Pattern` },
+      );
+
+      values[`${prefix}_brightness`] = state.brightness;
+      values[`${prefix}_frozen`] = state.frozen ? 'On' : 'Off';
+      values[`${prefix}_ftb`] = state.ftb ? 'On' : 'Off';
+      values[`${prefix}_bkg`] = state.bkg ? 'On' : 'Off';
+      values[`${prefix}_osd_text`] = state.osdText ? 'On' : 'Off';
+      values[`${prefix}_osd_image`] = state.osdImage ? 'On' : 'Off';
+      values[`${prefix}_test_pattern`] = state.testPattern ? 'On' : 'Off';
+    }
+
+    return { definitions, values };
+  }
+
+  // ========== ENHANCED: Offline mode data generation ==========
+
+  generateOfflineData() {
+    const screenCount = this.config.screenCount || 4;
+    const inputCardCount = this.config.inputCardCount || 10;
+    const PRESETS_PER_SCREEN = 20;
+
+    // Generate screenList matching the format from R0400/R0500/R0600
+    this.screenList = [];
+    for (let i = 0; i < screenCount; i++) {
+      const screen = {
+        screenId: i,
+        name: `Screen ${i + 1}`,
+        layers: [
+          { layerId: 0, name: 'Layer 1' },
+          { layerId: 1, name: 'Layer 2' },
+          { layerId: 2, name: 'Layer 3' },
+          { layerId: 3, name: 'Layer 4' },
+        ],
+        presets: [],
+        details: {
+          screenId: i,
+          brightness: 100,
+          screenFrz: 0,
+          blackout: 1, // 1 = not blacked out (FTB inverted logic)
+          bkgEnable: 0,
+          textOsdEnable: 0,
+          imgOsdEnable: 0,
+        },
+      };
+
+      for (let p = 0; p < PRESETS_PER_SCREEN; p++) {
+        screen.presets.push({
+          presetId: p,
+          name: `Preset ${p + 1}`,
+        });
+      }
+
+      this.screenList.push(screen);
+
+      // Initialize enhanced state for each offline screen
+      this.initEnhancedScreen(i);
+    }
+
+    // Generate empty preset collection list
+    this.presetCollectionList = [];
+
+    // Generate source list based on input card count (each card has 4 connectors)
+    this.sourceList = [];
+    for (let slot = 0; slot < inputCardCount; slot++) {
+      for (let connector = 0; connector < 4; connector++) {
+        const inputId = slot * 4 + connector;
+        this.sourceList.push({
+          inputId: inputId,
+          cropId: 255,
+          name: `Input ${slot + 1}-${connector + 1}`,
+          online: 1,
+          sourceType: 1,
+          interfaceType: 0,
+          slotId: slot,
+          templateId: 0,
+          streamId: 0,
+        });
+      }
+    }
+
+    this.log(
+      'info',
+      `Offline mode: Generated ${screenCount} screens, ${PRESETS_PER_SCREEN} presets each, ${this.sourceList.length} inputs (${inputCardCount} cards × 4)`,
+    );
+  }
+
+  // ========== ORIGINAL v3.0.2 methods (with enhancements noted) ==========
 
   handleGetAllData() {
     this.getAllData();
@@ -95,7 +246,7 @@ class ModuleInstance extends InstanceBase {
     }
     this.dataInterval = setInterval(() => {
       this.getAllData();
-    }, 10000);
+    }, this.config.pollInterval || 1000);
   }
 
   async init(config) {
@@ -104,8 +255,19 @@ class ModuleInstance extends InstanceBase {
       ...config,
     };
 
-    this.updateStatus(InstanceStatus.Connecting);
-    this.initUDP();
+    // Always generate data from config first (offline programming)
+    this.generateOfflineData();
+    this.updateAll();
+
+    // If host is configured, attempt connection
+    if (this.config.host) {
+      this.updateStatus(InstanceStatus.Connecting);
+      this.initUDP();
+    } else {
+      // No host = offline mode, status Ok for programming
+      this.log('info', 'No host configured — running in offline mode for programming');
+      this.updateStatus(InstanceStatus.Ok, 'Offline');
+    }
   }
 
   /** 更新actions、presets、feedbacks */
@@ -120,12 +282,17 @@ class ModuleInstance extends InstanceBase {
     const { presetCollectionVariableDefinitions, presetCollectionDefaultVariableValues } =
       formatPresetCollectionVariable(this.presetCollectionList);
     const { sourceVariableDefinitions, sourceDefaultVariableValues } = formatSourceVariable(this.sourceList);
+
+    // ENHANCED: Get per-screen enhanced variables
+    const { definitions: enhancedDefs, values: enhancedVals } = this.getEnhancedVariables();
+
     this.setVariableDefinitions([
       ...screenVariableDefinitions,
       ...layerVariableDefinitions,
       ...presetVariableDefinitions,
       ...presetCollectionVariableDefinitions,
       ...sourceVariableDefinitions,
+      ...enhancedDefs,
     ]);
     this.setVariableValues({
       ...screenDefaultVariableValues,
@@ -133,6 +300,7 @@ class ModuleInstance extends InstanceBase {
       ...presetDefaultVariableValues,
       ...presetCollectionDefaultVariableValues,
       ...sourceDefaultVariableValues,
+      ...enhancedVals,
     });
   }
 
@@ -146,6 +314,18 @@ class ModuleInstance extends InstanceBase {
   }
 
   getConfigFields() {
+    // Build screen count dropdown choices (1-40)
+    const screenCountChoices = [];
+    for (let i = 1; i <= 40; i++) {
+      screenCountChoices.push({ id: i, label: `${i}` });
+    }
+
+    // Build input card count dropdown choices (1-40)
+    const inputCardChoices = [];
+    for (let i = 1; i <= 40; i++) {
+      inputCardChoices.push({ id: i, label: `${i} (${i * 4} inputs)` });
+    }
+
     return [
       {
         type: 'static-text',
@@ -154,12 +334,13 @@ class ModuleInstance extends InstanceBase {
         label: 'Information',
         value: PRODUCTS_INFORMATION,
       },
+      // Connection settings
       {
         type: 'textinput',
         id: 'host',
         label: 'IP Address',
         width: 6,
-        default: '127.0.0.1',
+        default: '192.168.0.10',
         regex: Regex.IP,
       },
       {
@@ -169,6 +350,44 @@ class ModuleInstance extends InstanceBase {
         width: 6,
         default: '6000',
         regex: Regex.PORT,
+      },
+      {
+        type: 'number',
+        id: 'pollInterval',
+        label: 'Poll Interval (ms)',
+        width: 6,
+        min: 500,
+        max: 30000,
+        default: 1000,
+        tooltip: 'How often to poll the device for state updates (500-30000ms)',
+        isVisible: (config) => !!config.host,
+      },
+      // Device size configuration (always available for offline programming)
+      {
+        type: 'static-text',
+        id: 'offline_info',
+        width: 12,
+        label: 'Information',
+        value: 'The counts below will automatically populate from the device upon connection, however, they can be set manually for offline programming.',
+      },
+      {
+        type: 'dropdown',
+        id: 'screenCount',
+        label: 'Number of Screens',
+        width: 6,
+        default: 1,
+        choices: screenCountChoices,
+        tooltip: 'Number of screens on your device. Used for offline programming. Overridden by device when connected.',
+      },
+      {
+        type: 'dropdown',
+        id: 'inputCardCount',
+        label: 'Number of Input Cards',
+        width: 6,
+        default: 1,
+        choices: inputCardChoices,
+        tooltip:
+          'Number of input cards installed (each card has 4 connectors). Used for offline programming. Overridden by device when connected.',
       },
     ];
   }
@@ -185,7 +404,6 @@ class ModuleInstance extends InstanceBase {
           },
         ]);
         const croupList = [];
-        // console.info(1111, res[0]?.data?.inputs);
         const _data =
           res[0]?.data?.inputs?.map((_item) => {
             _item.crops?.forEach((cropItem) => {
@@ -264,7 +482,6 @@ class ModuleInstance extends InstanceBase {
 
       // If we get data, thing should be good
       this.udp.on('data', (msg) => {
-        // this.log("info", JSON.stringify(decodeRes(msg)));
         try {
           const res = decodeRes(msg);
           if (res.ack) {
@@ -281,17 +498,15 @@ class ModuleInstance extends InstanceBase {
       this.log('debug', 'initUDP finish');
     } else {
       this.log('error', 'No host configured');
-      // this.updateStatus(InstanceStatus.BadConfig);
     }
   }
   /** devices cmd handle end */
 
   async configUpdated(config) {
-    let resetConnection = false;
-
-    if (this.config.host != config.host) {
-      resetConnection = true;
-    }
+    const hadHost = !!this.config.host;
+    const hasHost = !!config.host;
+    const hostChanged = this.config.host !== config.host;
+    const sizeChanged = this.config.screenCount !== config.screenCount || this.config.inputCardCount !== config.inputCardCount;
 
     this.log('info', 'configUpdated module....');
 
@@ -300,17 +515,44 @@ class ModuleInstance extends InstanceBase {
       ...config,
     };
 
-    if (resetConnection) {
-      this.updateStatus(InstanceStatus.Connecting);
+    // If size config changed, regenerate offline data
+    if (sizeChanged) {
+      this.enhancedState = { screens: {} };
+      this.generateOfflineData();
+      this.updateAll();
+    }
 
-      // 停止心跳和初始化状态定时器，防止旧连接残留
+    // No host = stay in offline mode
+    if (!hasHost) {
+      // Tear down any existing connection
+      if (this.udp) {
+        this.udp.destroy();
+        delete this.udp;
+      }
+      if (this.dataInterval) {
+        clearInterval(this.dataInterval);
+        this.dataInterval = null;
+      }
       this.heartbeatManager.stop();
       this.clearInitStatusTimer();
+      this.connectStatus = false;
+      this.updateStatus(InstanceStatus.Ok, 'Offline');
+      return;
+    }
 
-      // 重新初始化UDP
+    // Host was added or changed — (re)connect
+    if (!hadHost || hostChanged) {
+      this.updateStatus(InstanceStatus.Connecting);
+      this.heartbeatManager.stop();
+      this.clearInitStatusTimer();
       this.initUDP();
-
       this.handleGetAllData();
+      return;
+    }
+
+    // Host unchanged but other config changed — just update
+    if (sizeChanged) {
+      // Already regenerated above, nothing else to do
     }
   }
 
@@ -375,8 +617,6 @@ class ModuleInstance extends InstanceBase {
         break;
       case ACTIONS_CMD.get_preset_list:
         this.dealPresetList(res.data);
-        // this.log('debug', `presetList22: ${JSON.stringify(res)}`);
-
         break;
       case ACTIONS_CMD.apply_screen_details:
         console.log('apply_screen_details', JSON.stringify(res.data));
@@ -384,7 +624,6 @@ class ModuleInstance extends InstanceBase {
         break;
       case ACTIONS_CMD.get_input_list_simplify:
         this.sourceList = formatSourceList(res.data.inputs);
-        // this.log('debug', `get_input_list_simplify响应: ${JSON.stringify(res.data)}`);
         break;
       case ACTIONS_CMD.device_heartbeat:
         this.heartbeatManager.receive();
@@ -409,7 +648,6 @@ class ModuleInstance extends InstanceBase {
 
   /** 处理图层列表 */
   dealLayerList(data) {
-    // console.log('layerList', JSON.stringify(data));
     if (this.screenList) {
       this.screenList.find((screen) => screen.screenId === data.screenId).layers = data.screenLayers.map((item) => ({
         layerId: item.layerId,
@@ -420,7 +658,6 @@ class ModuleInstance extends InstanceBase {
 
   /** 处理场景列表 */
   dealPresetList(data) {
-    // this.log('debug', `presetList1: ${JSON.stringify(data)}`);
     if (this.screenList) {
       this.screenList.find((screen) => screen.screenId === data.screenId).presets = data.presets.map((item) => ({
         presetId: item.presetId,
@@ -432,6 +669,8 @@ class ModuleInstance extends InstanceBase {
   dealScreenDetails(data) {
     if (this.screenList) {
       this.screenList.find((screen) => screen.screenId === data.screenId).details = data;
+      // ENHANCED: Update per-screen enhanced state from details
+      this.updateEnhancedFromDetails(data.screenId, data);
     }
   }
 
