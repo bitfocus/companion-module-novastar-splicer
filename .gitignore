@@ -5,3 +5,4 @@ package-lock.json
 pkg/
 pkg.tgz
 .DS_Store
+*.tgz
