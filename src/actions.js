@@ -530,6 +530,141 @@ export const getActions = (instance) => {
         instance.udp.send(command);
       },
     },
+    // ==================== Direct per-screen actions ====================
+    // These target a specific screen directly without needing select_screen first.
+
+    // Direct Freeze (W040A) - per screen
+    freeze_direct: {
+      name: 'Freeze (Direct)',
+      description: 'Enable or disable freeze on a specific screen.',
+      options: [
+        {
+          type: 'dropdown',
+          label: 'Screen',
+          id: 'screenId',
+          default: screenListDropDown[0]?.id ?? null,
+          choices: screenListDropDown,
+        },
+        {
+          type: 'dropdown',
+          label: 'State',
+          id: 'state',
+          default: 1,
+          choices: [
+            { id: 1, label: 'Enable' },
+            { id: 0, label: 'Disable' },
+          ],
+        },
+      ],
+      callback: async (event) => {
+        const screenId = event.options.screenId;
+        const state = parseInt(event.options.state);
+        instance.updateEnhancedFromAction(screenId, 'frozen', state === 1);
+        if (!instance.connectStatus) return;
+        instance.udp.send(handleParams(ACTIONS_CMD.screen_frz, { screenId, enable: state }));
+      },
+    },
+    // Direct FTB (W0409) - per screen
+    ftb_direct: {
+      name: 'FTB (Direct)',
+      description: 'Enable or disable Fade to Black on a specific screen.',
+      options: [
+        {
+          type: 'dropdown',
+          label: 'Screen',
+          id: 'screenId',
+          default: screenListDropDown[0]?.id ?? null,
+          choices: screenListDropDown,
+        },
+        {
+          type: 'dropdown',
+          label: 'State',
+          id: 'state',
+          default: 1,
+          choices: [
+            { id: 1, label: 'Enable' },
+            { id: 0, label: 'Disable' },
+          ],
+        },
+      ],
+      callback: async (event) => {
+        const screenId = event.options.screenId;
+        const state = parseInt(event.options.state);
+        // FTB inverted logic: type 0 = FTB on, type 1 = FTB off
+        instance.updateEnhancedFromAction(screenId, 'ftb', state === 1);
+        if (!instance.connectStatus) return;
+        const command = handleParams(ACTIONS_CMD.black_screen, {
+          screenId,
+          type: state === 1 ? 0 : 1,
+        });
+        instance.udp.send(command);
+      },
+    },
+    // Direct BKG (W040B) - per screen
+    bkg_direct: {
+      name: 'BKG (Direct)',
+      description: 'Enable or disable background on a specific screen.',
+      options: [
+        {
+          type: 'dropdown',
+          label: 'Screen',
+          id: 'screenId',
+          default: screenListDropDown[0]?.id ?? null,
+          choices: screenListDropDown,
+        },
+        {
+          type: 'dropdown',
+          label: 'State',
+          id: 'state',
+          default: 1,
+          choices: [
+            { id: 1, label: 'Enable' },
+            { id: 0, label: 'Disable' },
+          ],
+        },
+      ],
+      callback: async (event) => {
+        const screenId = event.options.screenId;
+        const state = parseInt(event.options.state);
+        instance.updateEnhancedFromAction(screenId, 'bkg', state === 1);
+        if (!instance.connectStatus) return;
+        const params = { screenId, enable: state, bkgId: 0 };
+        instance.udp.send(handleParams(ACTIONS_CMD.bkg_switch, params));
+      },
+    },
+    // Direct OSD (W040C) - per screen
+    osd_direct: {
+      name: 'OSD (Direct)',
+      description: 'Enable or disable OSD on a specific screen.',
+      options: [
+        {
+          type: 'dropdown',
+          label: 'Screen',
+          id: 'screenId',
+          default: screenListDropDown[0]?.id ?? null,
+          choices: screenListDropDown,
+        },
+        {
+          type: 'dropdown',
+          label: 'State',
+          id: 'state',
+          default: 1,
+          choices: [
+            { id: 1, label: 'Enable' },
+            { id: 0, label: 'Disable' },
+          ],
+        },
+      ],
+      callback: async (event) => {
+        const screenId = event.options.screenId;
+        const state = parseInt(event.options.state);
+        instance.updateEnhancedFromAction(screenId, 'osdText', state === 1);
+        instance.updateEnhancedFromAction(screenId, 'osdImage', state === 1);
+        if (!instance.connectStatus) return;
+        const params = { screenId, Osd: { enable: state } };
+        instance.udp.send(handleParams(ACTIONS_CMD.osd_switch, params));
+      },
+    },
     /** 图层冻结 */
     layer_frz_toggle: {
       name: 'Layer FRZ',

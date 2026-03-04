@@ -16,8 +16,8 @@ const buildAllPresets = (instance) => {
       type: 'simple',
       name,
       style: {
-        text: `$(${MODULE_NAME}:screen_${screenId + 1})`,
-        size: 'auto',
+        text: `Select\\n$(${MODULE_NAME}:screen_${screenId + 1})`,
+        size: '18',
         color: combineRgb(255, 255, 255),
         bgcolor: combineRgb(0, 0, 0),
       },
@@ -42,7 +42,7 @@ const buildAllPresets = (instance) => {
       type: 'simple',
       name: 'Preset Recall',
       localVariables: [
-        { variableName: 'presetIndex', variableType: 'simple', startupValue: 0 },
+        { variableName: 'presetIndex', variableType: 'simple', startupValue: 1 },
       ],
       style: {
         text: `$(${MODULE_NAME}:screen_${screenId + 1})\nPreset $(local:presetIndex)`,
@@ -54,7 +54,7 @@ const buildAllPresets = (instance) => {
         {
           feedbackId: 'preset_loaded',
           options: {
-            combineId: { value: `concat('${screenId}_', $(local:presetIndex))`, isExpression: true },
+            combineId: { value: `concat('${screenId}_', $(local:presetIndex) - 1)`, isExpression: true },
           },
           style: { bgcolor: combineRgb(0, 255, 0), color: combineRgb(0, 0, 0) },
         },
@@ -64,7 +64,7 @@ const buildAllPresets = (instance) => {
           down: [{
             actionId: 'load_preset',
             options: {
-              combineId: { value: `concat('${screenId}_', $(local:presetIndex))`, isExpression: true },
+              combineId: { value: `concat('${screenId}_', $(local:presetIndex) - 1)`, isExpression: true },
               screenId,
             },
           }],
@@ -81,7 +81,7 @@ const buildAllPresets = (instance) => {
       type: 'simple',
       name: 'Layer Select',
       localVariables: [
-        { variableName: 'layerIndex', variableType: 'simple', startupValue: 0 },
+        { variableName: 'layerIndex', variableType: 'simple', startupValue: 1 },
       ],
       style: {
         text: `$(${MODULE_NAME}:screen_${screenId + 1})\nLayer $(local:layerIndex)`,
@@ -93,7 +93,7 @@ const buildAllPresets = (instance) => {
         {
           feedbackId: 'layer_selected',
           options: {
-            combineId: { value: `concat('${screenId}_', $(local:layerIndex))`, isExpression: true },
+            combineId: { value: `concat('${screenId}_', $(local:layerIndex) - 1)`, isExpression: true },
           },
           style: { bgcolor: combineRgb(0, 255, 0), color: combineRgb(0, 0, 0) },
         },
@@ -103,7 +103,7 @@ const buildAllPresets = (instance) => {
           down: [{
             actionId: 'select_layer',
             options: {
-              combineId: { value: `concat('${screenId}_', $(local:layerIndex))`, isExpression: true },
+              combineId: { value: `concat('${screenId}_', $(local:layerIndex) - 1)`, isExpression: true },
               screenId,
               enable: 1,
             },
@@ -114,7 +114,7 @@ const buildAllPresets = (instance) => {
           down: [{
             actionId: 'select_layer',
             options: {
-              combineId: { value: `concat('${screenId}_', $(local:layerIndex))`, isExpression: true },
+              combineId: { value: `concat('${screenId}_', $(local:layerIndex) - 1)`, isExpression: true },
               screenId,
               enable: 0,
             },
@@ -428,7 +428,7 @@ const buildAllPresets = (instance) => {
     presets[`direct_pgm_pvw_${screenId}`] = {
       type: 'simple',
       name: `${name} PGM/PVW`,
-      style: { text: `${name}\nPGM/PVW`, size: 'auto', color: combineRgb(255, 255, 255), bgcolor: combineRgb(0, 0, 0) },
+      style: { text: `${name}\nPGM/PVW`, size: '14', color: combineRgb(255, 255, 255), bgcolor: combineRgb(0, 0, 0) },
       steps: [
         { down: [{ actionId: 'select_screen', options: { screenId, enable: 1 } }, { actionId: 'pgm_pvw_switch', options: { enNonTime: 0 } }], up: [] },
         { down: [{ actionId: 'select_screen', options: { screenId, enable: 1 } }, { actionId: 'pgm_pvw_switch', options: { enNonTime: 1 } }], up: [] },
@@ -457,8 +457,8 @@ const buildAllPresets = (instance) => {
       name: `${name} FTB`,
       style: { text: `${name}\nFTB`, size: 'auto', color: combineRgb(255, 255, 255), bgcolor: combineRgb(0, 0, 0) },
       steps: [
-        { down: [{ actionId: 'select_screen', options: { screenId, enable: 1 } }, { actionId: 'apply_ftb', options: { type: 0 } }], up: [] },
-        { down: [{ actionId: 'select_screen', options: { screenId, enable: 1 } }, { actionId: 'apply_ftb', options: { type: 1 } }], up: [] },
+        { down: [{ actionId: 'ftb_direct', options: { screenId, state: 1 } }], up: [] },
+        { down: [{ actionId: 'ftb_direct', options: { screenId, state: 0 } }], up: [] },
       ],
       feedbacks: [
         { feedbackId: 'ftb_direct', options: { screenId }, style: { bgcolor: combineRgb(255, 0, 0), color: combineRgb(255, 255, 255) } },
@@ -468,10 +468,10 @@ const buildAllPresets = (instance) => {
     presets[`direct_freeze_${screenId}`] = {
       type: 'simple',
       name: `${name} Freeze`,
-      style: { text: `${name}\nFRZ`, size: 'auto', color: combineRgb(255, 255, 255), bgcolor: combineRgb(0, 0, 0) },
+      style: { text: `${name}\nFreeze`, size: 'auto', color: combineRgb(255, 255, 255), bgcolor: combineRgb(0, 0, 0) },
       steps: [
-        { down: [{ actionId: 'select_screen', options: { screenId, enable: 1 } }, { actionId: 'screen_frz_toggle', options: { enable: 1 } }], up: [] },
-        { down: [{ actionId: 'select_screen', options: { screenId, enable: 1 } }, { actionId: 'screen_frz_toggle', options: { enable: 0 } }], up: [] },
+        { down: [{ actionId: 'freeze_direct', options: { screenId, state: 1 } }], up: [] },
+        { down: [{ actionId: 'freeze_direct', options: { screenId, state: 0 } }], up: [] },
       ],
       feedbacks: [
         { feedbackId: 'frozen_direct', options: { screenId }, style: { bgcolor: combineRgb(0, 0, 255), color: combineRgb(255, 255, 255) } },
@@ -483,8 +483,8 @@ const buildAllPresets = (instance) => {
       name: `${name} BKG`,
       style: { text: `${name}\nBKG`, size: 'auto', color: combineRgb(255, 255, 255), bgcolor: combineRgb(0, 0, 0) },
       steps: [
-        { down: [{ actionId: 'select_screen', options: { screenId, enable: 1 } }, { actionId: 'bkg_switch', options: { enable: 1 } }], up: [] },
-        { down: [{ actionId: 'select_screen', options: { screenId, enable: 1 } }, { actionId: 'bkg_switch', options: { enable: 0 } }], up: [] },
+        { down: [{ actionId: 'bkg_direct', options: { screenId, state: 1 } }], up: [] },
+        { down: [{ actionId: 'bkg_direct', options: { screenId, state: 0 } }], up: [] },
       ],
       feedbacks: [
         { feedbackId: 'bkg_direct', options: { screenId }, style: { bgcolor: combineRgb(0, 255, 0), color: combineRgb(0, 0, 0) } },
@@ -496,8 +496,8 @@ const buildAllPresets = (instance) => {
       name: `${name} OSD Text`,
       style: { text: `${name}\nOSD Text`, size: 'auto', color: combineRgb(255, 255, 255), bgcolor: combineRgb(0, 0, 0) },
       steps: [
-        { down: [{ actionId: 'select_screen', options: { screenId, enable: 1 } }, { actionId: 'osd_switch', options: { enable: 1, osdType: 'text' } }], up: [] },
-        { down: [{ actionId: 'select_screen', options: { screenId, enable: 1 } }, { actionId: 'osd_switch', options: { enable: 0, osdType: 'text' } }], up: [] },
+        { down: [{ actionId: 'osd_direct', options: { screenId, state: 1 } }], up: [] },
+        { down: [{ actionId: 'osd_direct', options: { screenId, state: 0 } }], up: [] },
       ],
       feedbacks: [
         { feedbackId: 'osd_text_direct', options: { screenId }, style: { bgcolor: combineRgb(0, 255, 0), color: combineRgb(0, 0, 0) } },
@@ -509,8 +509,8 @@ const buildAllPresets = (instance) => {
       name: `${name} OSD Image`,
       style: { text: `${name}\nOSD Img`, size: 'auto', color: combineRgb(255, 255, 255), bgcolor: combineRgb(0, 0, 0) },
       steps: [
-        { down: [{ actionId: 'select_screen', options: { screenId, enable: 1 } }, { actionId: 'osd_switch', options: { enable: 1, osdType: 'image' } }], up: [] },
-        { down: [{ actionId: 'select_screen', options: { screenId, enable: 1 } }, { actionId: 'osd_switch', options: { enable: 0, osdType: 'image' } }], up: [] },
+        { down: [{ actionId: 'osd_direct', options: { screenId, state: 1 } }], up: [] },
+        { down: [{ actionId: 'osd_direct', options: { screenId, state: 0 } }], up: [] },
       ],
       feedbacks: [
         { feedbackId: 'osd_image_direct', options: { screenId }, style: { bgcolor: combineRgb(0, 255, 0), color: combineRgb(0, 0, 0) } },
@@ -568,7 +568,7 @@ const buildStructure = (instance) => {
         templateVariableName: 'presetIndex',
         templateValues: screenPresets.map((p) => ({
           name: p.name || `Preset ${p.presetId + 1}`,
-          value: p.presetId,
+          value: p.presetId + 1,
         })),
       });
     }
@@ -585,7 +585,7 @@ const buildStructure = (instance) => {
         templateVariableName: 'layerIndex',
         templateValues: screenLayers.map((l) => ({
           name: l.name || `Layer ${l.layerId + 1}`,
-          value: l.layerId,
+          value: l.layerId + 1,
         })),
       });
     }
