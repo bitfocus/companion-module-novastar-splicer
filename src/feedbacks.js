@@ -339,17 +339,16 @@ export const getFeedbacks = (instance) => {
           choices: screenChoices,
         },
         {
-          type: 'number',
-          label: 'Brightness',
+          type: 'textinput',
+          label: 'Brightness (0-100)',
           id: 'brightness',
-          default: 100,
-          min: 0,
-          max: 100,
+          default: '100',
+          useVariables: true,
         },
       ],
       callback: (event) => {
         const state = instance.enhancedState.screens[event.options.screenId];
-        return state ? state.brightness === event.options.brightness : false;
+        return state ? Number(state.brightness) === Number(event.options.brightness) : false;
       },
     },
     test_pattern_direct: {

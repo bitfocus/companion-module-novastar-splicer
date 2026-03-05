@@ -16,8 +16,8 @@ const getSLPPresets = (screenList) => {
       category: 'Screen',
       name: name,
       style: {
-        text: `$(${MODULE_NAME}:screen_${screenId + 1})`,
-        size: 'auto',
+        text: `Select\\n$(${MODULE_NAME}:screen_${screenId + 1})`,
+        size: '18',
         color: combineRgb(255, 255, 255),
         bgcolor: combineRgb(0, 0, 0),
       },
@@ -366,9 +366,9 @@ const applyScreenPreset = () => {
   const freezeScreen = {
     type: 'button',
     category: 'Display',
-    name: 'Screen FRZ',
+    name: 'Freeze',
     style: {
-      text: 'Screen\nFRZ',
+      text: 'Freeze',
       size: 'auto',
       color: combineRgb(255, 255, 255),
       bgcolor: combineRgb(0, 0, 0),
@@ -555,32 +555,13 @@ const getPerScreenControlPresets = (instance) => {
       type: 'button',
       category,
       name: `${name} FTB`,
-      style: {
-        text: `${name}\nFTB`,
-        size: 'auto',
-        color: combineRgb(255, 255, 255),
-        bgcolor: combineRgb(0, 0, 0),
-      },
+      style: { text: `${name}\nFTB`, size: 'auto', color: combineRgb(255, 255, 255), bgcolor: combineRgb(0, 0, 0) },
       steps: [
-        {
-          down: [
-            { actionId: 'select_screen', options: { screenId, enable: 1 } },
-            { actionId: 'apply_ftb', options: { type: 0 } },
-          ],
-        },
-        {
-          down: [
-            { actionId: 'select_screen', options: { screenId, enable: 1 } },
-            { actionId: 'apply_ftb', options: { type: 1 } },
-          ],
-        },
+        { down: [{ actionId: 'ftb_direct', options: { screenId, state: 1 } }] },
+        { down: [{ actionId: 'ftb_direct', options: { screenId, state: 0 } }] },
       ],
       feedbacks: [
-        {
-          feedbackId: 'ftb_direct',
-          options: { screenId },
-          style: { bgcolor: combineRgb(255, 0, 0), color: combineRgb(255, 255, 255) },
-        },
+        { feedbackId: 'ftb_direct', options: { screenId }, style: { bgcolor: combineRgb(255, 0, 0), color: combineRgb(255, 255, 255) } },
       ],
     };
 
@@ -589,32 +570,13 @@ const getPerScreenControlPresets = (instance) => {
       type: 'button',
       category,
       name: `${name} Freeze`,
-      style: {
-        text: `${name}\nFRZ`,
-        size: 'auto',
-        color: combineRgb(255, 255, 255),
-        bgcolor: combineRgb(0, 0, 0),
-      },
+      style: { text: `${name}\nFreeze`, size: 'auto', color: combineRgb(255, 255, 255), bgcolor: combineRgb(0, 0, 0) },
       steps: [
-        {
-          down: [
-            { actionId: 'select_screen', options: { screenId, enable: 1 } },
-            { actionId: 'screen_frz_toggle', options: { enable: 1 } },
-          ],
-        },
-        {
-          down: [
-            { actionId: 'select_screen', options: { screenId, enable: 1 } },
-            { actionId: 'screen_frz_toggle', options: { enable: 0 } },
-          ],
-        },
+        { down: [{ actionId: 'freeze_direct', options: { screenId, state: 1 } }] },
+        { down: [{ actionId: 'freeze_direct', options: { screenId, state: 0 } }] },
       ],
       feedbacks: [
-        {
-          feedbackId: 'frozen_direct',
-          options: { screenId },
-          style: { bgcolor: combineRgb(0, 0, 255), color: combineRgb(255, 255, 255) },
-        },
+        { feedbackId: 'frozen_direct', options: { screenId }, style: { bgcolor: combineRgb(0, 0, 255), color: combineRgb(255, 255, 255) } },
       ],
     };
 
@@ -625,8 +587,8 @@ const getPerScreenControlPresets = (instance) => {
       name: `${name} BKG`,
       style: { text: `${name}\nBKG`, size: 'auto', color: combineRgb(255, 255, 255), bgcolor: combineRgb(0, 0, 0) },
       steps: [
-        { down: [{ actionId: 'select_screen', options: { screenId, enable: 1 } }, { actionId: 'bkg_switch', options: { enable: 1 } }] },
-        { down: [{ actionId: 'select_screen', options: { screenId, enable: 1 } }, { actionId: 'bkg_switch', options: { enable: 0 } }] },
+        { down: [{ actionId: 'bkg_direct', options: { screenId, state: 1 } }] },
+        { down: [{ actionId: 'bkg_direct', options: { screenId, state: 0 } }] },
       ],
       feedbacks: [
         { feedbackId: 'bkg_direct', options: { screenId }, style: { bgcolor: combineRgb(0, 255, 0), color: combineRgb(0, 0, 0) } },
@@ -640,8 +602,8 @@ const getPerScreenControlPresets = (instance) => {
       name: `${name} OSD Text`,
       style: { text: `${name}\nOSD Text`, size: 'auto', color: combineRgb(255, 255, 255), bgcolor: combineRgb(0, 0, 0) },
       steps: [
-        { down: [{ actionId: 'select_screen', options: { screenId, enable: 1 } }, { actionId: 'osd_switch', options: { enable: 1, osdType: 'text' } }] },
-        { down: [{ actionId: 'select_screen', options: { screenId, enable: 1 } }, { actionId: 'osd_switch', options: { enable: 0, osdType: 'text' } }] },
+        { down: [{ actionId: 'osd_direct', options: { screenId, state: 1 } }] },
+        { down: [{ actionId: 'osd_direct', options: { screenId, state: 0 } }] },
       ],
       feedbacks: [
         { feedbackId: 'osd_text_direct', options: { screenId }, style: { bgcolor: combineRgb(0, 255, 0), color: combineRgb(0, 0, 0) } },
@@ -655,8 +617,8 @@ const getPerScreenControlPresets = (instance) => {
       name: `${name} OSD Image`,
       style: { text: `${name}\nOSD Img`, size: 'auto', color: combineRgb(255, 255, 255), bgcolor: combineRgb(0, 0, 0) },
       steps: [
-        { down: [{ actionId: 'select_screen', options: { screenId, enable: 1 } }, { actionId: 'osd_switch', options: { enable: 1, osdType: 'image' } }] },
-        { down: [{ actionId: 'select_screen', options: { screenId, enable: 1 } }, { actionId: 'osd_switch', options: { enable: 0, osdType: 'image' } }] },
+        { down: [{ actionId: 'osd_direct', options: { screenId, state: 1 } }] },
+        { down: [{ actionId: 'osd_direct', options: { screenId, state: 0 } }] },
       ],
       feedbacks: [
         { feedbackId: 'osd_image_direct', options: { screenId }, style: { bgcolor: combineRgb(0, 255, 0), color: combineRgb(0, 0, 0) } },
@@ -677,7 +639,51 @@ const getPerScreenControlPresets = (instance) => {
         { feedbackId: 'test_pattern_direct', options: { screenId }, style: { bgcolor: combineRgb(0, 255, 0), color: combineRgb(0, 0, 0) } },
       ],
     };
+
+    // Per-screen PGM/PVW
+    presets[`direct_pgm_pvw_${screenId}`] = {
+      type: 'button',
+      category,
+      name: `${name} PGM/PVW`,
+      style: { text: `${name}\nPGM/PVW`, size: '14', color: combineRgb(255, 255, 255), bgcolor: combineRgb(0, 0, 0) },
+      steps: [
+        { down: [{ actionId: 'select_screen', options: { screenId, enable: 1 } }, { actionId: 'pgm_pvw_switch', options: { enNonTime: 0 } }] },
+        { down: [{ actionId: 'select_screen', options: { screenId, enable: 1 } }, { actionId: 'pgm_pvw_switch', options: { enNonTime: 1 } }] },
+      ],
+      feedbacks: [
+        { feedbackId: 'pgm_pvw_switch', options: { type: PGM_PVW_TYPE.PGM }, style: { bgcolor: combineRgb(0, 255, 0), color: combineRgb(0, 0, 0), text: `${name}\nPGM` } },
+        { feedbackId: 'pgm_pvw_switch', options: { type: PGM_PVW_TYPE.PVW }, style: { bgcolor: combineRgb(255, 0, 0), color: combineRgb(0, 0, 0), text: `${name}\nPVW` } },
+      ],
+    };
+
+    // Per-screen Take
+    presets[`direct_take_${screenId}`] = {
+      type: 'button',
+      category,
+      name: `${name} Take`,
+      style: { text: `${name}\nTake`, size: 'auto', color: combineRgb(255, 255, 255), bgcolor: combineRgb(0, 0, 0) },
+      steps: [
+        { down: [{ actionId: 'select_screen', options: { screenId, enable: 1 } }, { actionId: 'take_switch', options: { manualPlay: 1 } }] },
+        { down: [{ actionId: 'select_screen', options: { screenId, enable: 1 } }, { actionId: 'take_switch', options: { manualPlay: 0 } }] },
+      ],
+      feedbacks: [
+        { feedbackId: 'pvw_take_selected', style: { bgcolor: combineRgb(0, 255, 0), color: combineRgb(0, 0, 0) } },
+      ],
+    };
   });
+
+  // Blackout (global - all screens)
+  presets['blackout_global'] = {
+    type: 'button',
+    category: 'Display',
+    name: 'Blackout',
+    style: { text: 'Blackout', size: 'auto', color: combineRgb(255, 255, 255), bgcolor: combineRgb(0, 0, 0) },
+    steps: [
+      { down: [{ actionId: 'blackout', options: { state: 1 } }] },
+      { down: [{ actionId: 'blackout', options: { state: 0 } }] },
+    ],
+    feedbacks: [],
+  };
 
   return presets;
 };
@@ -685,20 +691,14 @@ const getPerScreenControlPresets = (instance) => {
 /** Generate per-screen brightness presets (common levels + increment/decrement) */
 const getPerScreenBrightnessPresets = (instance) => {
   const presets = {};
-  const levels = [
-    { pct: 0, color: combineRgb(80, 80, 80) },
-    { pct: 25, color: combineRgb(100, 100, 0) },
-    { pct: 50, color: combineRgb(180, 180, 0) },
-    { pct: 75, color: combineRgb(200, 160, 0) },
-    { pct: 100, color: combineRgb(255, 255, 255) },
-  ];
+  const levels = [100, 95, 90, 85, 80, 75, 70, 65, 60, 55, 50, 45, 40, 35, 30, 25, 20, 15, 10, 5, 0];
 
   instance.screenList?.forEach((screen) => {
     const { name, screenId } = screen;
     const category = `Brightness: ${name}`;
 
-    // Common brightness levels
-    levels.forEach(({ pct, color }) => {
+    // Brightness level presets
+    levels.forEach((pct) => {
       presets[`direct_bright_${screenId}_${pct}`] = {
         type: 'button',
         category,
@@ -706,23 +706,21 @@ const getPerScreenBrightnessPresets = (instance) => {
         style: {
           text: `${name}\n${pct}%`,
           size: 'auto',
-          color: combineRgb(0, 0, 0),
-          bgcolor: color,
+          color: combineRgb(255, 255, 255),
+          bgcolor: combineRgb(0, 0, 0),
         },
-        // Note: This uses select_screen + brightness set pattern
-        // Since there's no "set brightness to X" action in v3.0.2,
-        // we use the feedback to show status only
         steps: [
           {
             down: [
-              { actionId: 'select_screen', options: { screenId, enable: 1 } },
+              { actionId: 'set_brightness', options: { screenId, brightness: pct.toString() } },
+              { actionId: 'save_brightness', options: { screenId }, delay: 100 },
             ],
           },
         ],
         feedbacks: [
           {
             feedbackId: 'brightness_match',
-            options: { screenId, brightness: pct },
+            options: { screenId, brightness: String(pct) },
             style: { bgcolor: combineRgb(0, 255, 0), color: combineRgb(0, 0, 0) },
           },
         ],

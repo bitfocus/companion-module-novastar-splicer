@@ -91,6 +91,27 @@ class ModuleInstance extends InstanceBase {
     };
   }
 
+  // ========== Safe UDP send wrapper ==========
+
+  /** Send data via UDP with error handling to prevent crashes */
+  safeSend(data) {
+    if (!this.udp) {
+      this.log('debug', 'safeSend: no UDP socket');
+      return;
+    }
+    try {
+      this.udp.send(data);
+    } catch (err) {
+      this.log('warn', `UDP send error: ${err.message}`);
+      this.connectStatus = false;
+      if (this.config.offlineMode) {
+        this.updateStatus(InstanceStatus.Ok, 'Offline Programming Mode');
+      } else {
+        this.updateStatus(InstanceStatus.ConnectionFailure);
+      }
+    }
+  }
+
   // ========== ENHANCED: Per-screen state management ==========
 
   /** Initialize enhanced state for a screen with defaults */
@@ -127,7 +148,22 @@ class ModuleInstance extends InstanceBase {
       this.initEnhancedScreen(screenId);
     }
     this.enhancedState.screens[screenId][property] = value;
-    this.checkFeedbacks();
+
+    // Push updated variable value to Companion immediately
+    const prefix = `screen_${screenId + 1}`;
+    const varMap = {
+      brightness: { key: `${prefix}_brightness`, val: value, feedbacks: ['brightness_match'] },
+      frozen: { key: `${prefix}_frozen`, val: value ? 'On' : 'Off', feedbacks: ['frozen_direct', 'screen_frz'] },
+      ftb: { key: `${prefix}_ftb`, val: value ? 'On' : 'Off', feedbacks: ['ftb_direct', 'ftb_selected'] },
+      bkg: { key: `${prefix}_bkg`, val: value ? 'On' : 'Off', feedbacks: ['bkg_direct', 'bkg_switch'] },
+      osdText: { key: `${prefix}_osd_text`, val: value ? 'On' : 'Off', feedbacks: ['osd_text_direct', 'osd_switch'] },
+      osdImage: { key: `${prefix}_osd_image`, val: value ? 'On' : 'Off', feedbacks: ['osd_image_direct', 'osd_switch'] },
+      testPattern: { key: `${prefix}_test_pattern`, val: value ? 'On' : 'Off', feedbacks: ['test_pattern_direct', 'test_pattern_selected'] },
+    };
+    if (varMap[property]) {
+      this.setVariableValues({ [varMap[property].key]: varMap[property].val });
+      this.checkFeedbacks(...varMap[property].feedbacks);
+    }
   }
 
   /** Generate per-screen enhanced variables */
@@ -259,14 +295,21 @@ class ModuleInstance extends InstanceBase {
     this.generateOfflineData();
     this.updateAll();
 
+    // Offline Programming Mode — set OK immediately so variables and feedbacks work
+    if (this.config.offlineMode) {
+      this.log('info', 'Offline Programming Mode enabled');
+      this.updateStatus(InstanceStatus.Ok, 'Offline Programming Mode');
+    }
+
     // If host is configured, attempt connection
     if (this.config.host) {
-      this.updateStatus(InstanceStatus.Connecting);
+      if (!this.config.offlineMode) {
+        this.updateStatus(InstanceStatus.Connecting);
+      }
       this.initUDP();
-    } else {
-      // No host = offline mode, status Ok for programming
-      this.log('info', 'No host configured — running in offline mode for programming');
-      this.updateStatus(InstanceStatus.Ok, 'Offline');
+    } else if (!this.config.offlineMode) {
+      this.log('info', 'No host configured');
+      this.updateStatus(InstanceStatus.Disconnected, 'No host configured');
     }
   }
 
@@ -365,9 +408,24 @@ class ModuleInstance extends InstanceBase {
       // Device size configuration (always available for offline programming)
       {
         type: 'static-text',
+        id: 'offline_heading',
+        width: 12,
+        label: 'Offline Programming',
+        value: 'Enable Offline Programming Mode to activate variables and feedbacks without a device connection. This allows full pre-programming of your show before equipment arrives on-site.',
+      },
+      {
+        type: 'checkbox',
+        id: 'offlineMode',
+        label: 'Enable Offline Programming Mode',
+        width: 6,
+        default: false,
+        tooltip: 'When enabled, the module will report as connected (OK) even without a device, allowing variables and feedbacks to function for offline programming.',
+      },
+      {
+        type: 'static-text',
         id: 'offline_info',
         width: 12,
-        label: 'Information',
+        label: 'Device Configuration',
         value: 'The counts below will automatically populate from the device upon connection, however, they can be set manually for offline programming.',
       },
       {
@@ -507,6 +565,7 @@ class ModuleInstance extends InstanceBase {
     const hasHost = !!config.host;
     const hostChanged = this.config.host !== config.host;
     const sizeChanged = this.config.screenCount !== config.screenCount || this.config.inputCardCount !== config.inputCardCount;
+    const offlineModeChanged = this.config.offlineMode !== config.offlineMode;
 
     this.log('info', 'configUpdated module....');
 
@@ -520,6 +579,20 @@ class ModuleInstance extends InstanceBase {
       this.enhancedState = { screens: {} };
       this.generateOfflineData();
       this.updateAll();
+    }
+
+    // If offline mode toggled, update status immediately
+    if (offlineModeChanged) {
+      if (this.config.offlineMode) {
+        this.updateStatus(InstanceStatus.Ok, 'Offline Programming Mode');
+        this.updateAll();
+      } else if (!this.connectStatus) {
+        if (hasHost) {
+          this.updateStatus(InstanceStatus.Connecting);
+        } else {
+          this.updateStatus(InstanceStatus.Disconnected, 'No host configured');
+        }
+      }
     }
 
     // No host = stay in offline mode
@@ -536,7 +609,11 @@ class ModuleInstance extends InstanceBase {
       this.heartbeatManager.stop();
       this.clearInitStatusTimer();
       this.connectStatus = false;
-      this.updateStatus(InstanceStatus.Ok, 'Offline');
+      if (this.config.offlineMode) {
+        this.updateStatus(InstanceStatus.Ok, 'Offline Programming Mode');
+      } else {
+        this.updateStatus(InstanceStatus.Disconnected, 'No host configured');
+      }
       return;
     }
 
@@ -566,7 +643,7 @@ class ModuleInstance extends InstanceBase {
   sendInitStatusRequest() {
     this.log('debug', 'Sending initial status request...');
     if (this.udp) {
-      this.udp.send(Buffer.from(JSON.stringify([{ cmd: ACTIONS_CMD.get_device_init_status, param0: this.deviceId }])));
+      this.safeSend(Buffer.from(JSON.stringify([{ cmd: ACTIONS_CMD.get_device_init_status, param0: this.deviceId }])));
     }
   }
 
@@ -597,7 +674,7 @@ class ModuleInstance extends InstanceBase {
 
   sendHeartbeat() {
     if (this.udp) {
-      this.udp.send(Buffer.from(JSON.stringify([{ cmd: ACTIONS_CMD.device_heartbeat, deviceId: this.deviceId }])));
+      this.safeSend(Buffer.from(JSON.stringify([{ cmd: ACTIONS_CMD.device_heartbeat, deviceId: this.deviceId }])));
     }
   }
 

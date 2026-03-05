@@ -51,7 +51,7 @@ export const sendUDPRequest = (instance, cmd, params = {}) => {
     instance.on('udp_response', responseHandler);
 
     // 发送UDP请求
-    instance.udp.send(command);
+    instance.safeSend(command);
   });
 };
 
