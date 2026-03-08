@@ -92,3 +92,17 @@ Control module for Novastar H Series video wall processors (H2, H5, H9, H15, H20
 ### Preset Templates
 
 Brightness level presets are generated using Companion 4.3's template system. Each screen gets a set of brightness buttons (100% down to 0% in 5% steps) that automatically set brightness and save to hardware with a 100ms delay. Feedback highlights the button matching current brightness.
+
+### Upgrading from v3.0.2
+
+All existing action and feedback configurations are compatible. **Variable names have changed** from 0-based to 1-based numbering. If you manually typed variable references in button text (not from presets), you will need to update them:
+
+| Old (v3.0.2) | New (v3.2) |
+|---|---|
+| `$(novastar-splicer:screenId_0)` | `$(novastar-splicer:screen_1)` |
+| `$(novastar-splicer:screenId_0_layerId_0)` | `$(novastar-splicer:screen_1_layer_1)` |
+| `$(novastar-splicer:screenId_0_presetId_0)` | `$(novastar-splicer:screen_1_preset_1)` |
+| `$(novastar-splicer:presetCollectionId_0)` | `$(novastar-splicer:presetCollectionId_1)` |
+| `$(novastar-splicer:source_0_255)` | `$(novastar-splicer:source_1_255)` |
+
+All numbering is now **1-based** (Screen 1, Layer 1, Preset 1). Buttons created from presets will update automatically — only manually-typed variable references need to be changed.

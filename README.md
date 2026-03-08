@@ -23,6 +23,10 @@ Communicates via UDP on port 6000 using the Novastar H Series Control Protocol (
 
 Install as a custom module in Companion 4.3+.
 
+## Upgrading from v3.0.2
+
+All existing action and feedback configurations are compatible. **Variable names have changed** from 0-based to 1-based numbering (e.g. `screenId_0` → `screen_1`). If you manually typed variable references in button text, you'll need to update them. See [HELP.md](./companion/HELP.md) for the full mapping.
+
 ## Version History
 
 ### 3.2.0
