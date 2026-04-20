@@ -37,6 +37,8 @@ export const ACTIONS_CMD = {
   layer_frz: 'W0509',
   /** 屏幕亮度调节 */
   apply_screen_brightness: 'W0410',
+  /** 保存屏幕亮度到接收卡 */
+  save_screen_brightness: 'W0417',
   /**切源 */
   source_switch: 'W0506',
   /**输出列表 */
@@ -53,6 +55,8 @@ export const ACTIONS_CMD = {
   get_device_init_status: 'R0118',
   /** 设备心跳协议 */
   device_heartbeat: 'W0120',
+  /** 全局黑屏 */
+  blackout: 'W0700',
 };
 
 export const SCREEN_COUNT_H = 40;

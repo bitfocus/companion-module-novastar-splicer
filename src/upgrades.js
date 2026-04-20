@@ -27,4 +27,32 @@ export const upgradeScripts = [
     }
     return result;
   },
+  // Migrate from offline_mode checkbox to host-based offline detection
+  function (_context, props) {
+    const result = {
+      updatedConfig: null,
+      updatedActions: [],
+      updatedFeedbacks: [],
+    };
+
+    if (props.config) {
+      const config = props.config;
+
+      // If old offline_mode was enabled and a host was set,
+      // clear the host so the module stays in offline mode
+      if (config.offline_mode === true && config.host) {
+        result.updatedConfig = {
+          ...config,
+          host: '',
+        };
+        delete result.updatedConfig.offline_mode;
+      } else if (config.offline_mode !== undefined) {
+        // Just remove the old offline_mode field
+        result.updatedConfig = { ...config };
+        delete result.updatedConfig.offline_mode;
+      }
+    }
+
+    return result;
+  },
 ];
