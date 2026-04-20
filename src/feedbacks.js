@@ -373,5 +373,38 @@ export const getFeedbacks = (instance) => {
         return state ? state.testPattern : false;
       },
     },
+    input_signal: {
+      type: 'boolean',
+      name: 'Input Signal Active',
+      description: 'True when an input has an active signal.',
+      defaultStyle: {
+        bgcolor: combineRgb(0, 200, 0),
+        color: combineRgb(255, 255, 255),
+      },
+      options: [
+        {
+          type: 'dropdown',
+          label: 'Input',
+          id: 'inputKey',
+          default: 'input_1_1',
+          choices: (() => {
+            const choices = [];
+            const inputCardCount = instance.config?.inputCardCount || 1;
+            for (let slot = 0; slot < inputCardCount; slot++) {
+              for (let conn = 0; conn < 4; conn++) {
+                choices.push({
+                  id: `input_${slot + 1}_${conn + 1}`,
+                  label: `Input ${slot + 1}-${conn + 1}`,
+                });
+              }
+            }
+            return choices;
+          })(),
+        },
+      ],
+      callback: (event) => {
+        return instance.inputSignalState[event.options.inputKey] === true;
+      },
+    },
   };
 };

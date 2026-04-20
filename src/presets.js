@@ -181,7 +181,7 @@ const buildAllPresets = (instance) => {
       name: `${name} Brightness +`,
       style: { text: `${name}\nBright +`, size: 'auto', color: combineRgb(255, 255, 255), bgcolor: combineRgb(0, 0, 0) },
       steps: [
-        { down: [{ actionId: 'select_screen', options: { screenId, enable: 1 } }, { actionId: 'screen_brightness_add', options: {} }], up: [] },
+        { down: [{ actionId: 'brightness_add_direct', options: { screenId } }], up: [] },
       ],
       feedbacks: [],
     };
@@ -191,7 +191,7 @@ const buildAllPresets = (instance) => {
       name: `${name} Brightness -`,
       style: { text: `${name}\nBright -`, size: 'auto', color: combineRgb(255, 255, 255), bgcolor: combineRgb(0, 0, 0) },
       steps: [
-        { down: [{ actionId: 'select_screen', options: { screenId, enable: 1 } }, { actionId: 'screen_brightness_minus', options: {} }], up: [] },
+        { down: [{ actionId: 'brightness_minus_direct', options: { screenId } }], up: [] },
       ],
       feedbacks: [],
     };

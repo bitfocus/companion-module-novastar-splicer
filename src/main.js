@@ -89,6 +89,8 @@ class ModuleInstance extends InstanceBase {
     this.enhancedState = {
       screens: {},
     };
+    /** Input signal state — keyed by `input_${slot+1}_${connector+1}` -> boolean */
+    this.inputSignalState = {};
   }
 
   // ========== Safe UDP send wrapper ==========
@@ -204,6 +206,12 @@ class ModuleInstance extends InstanceBase {
       values[`${prefix}_test_pattern`] = state.testPattern ? 'On' : 'Off';
     }
 
+    // Input signal variables
+    for (const [inputKey, hasSignal] of Object.entries(this.inputSignalState)) {
+      definitions[`${inputKey}_signal`] = { name: `${inputKey.replace('_', ' ').replace('_', '-')} Signal` };
+      values[`${inputKey}_signal`] = hasSignal ? 'Active' : 'No Signal';
+    }
+
     return { definitions, values };
   }
 
@@ -299,12 +307,10 @@ class ModuleInstance extends InstanceBase {
       ...config,
     };
 
-    // Always generate data from config first (offline programming)
-    this.generateOfflineData();
-    this.updateAll();
-
-    // Offline Programming Mode — set OK immediately so variables and feedbacks work
+    // Offline Programming Mode — generate data and set OK
     if (this.config.offlineMode) {
+      this.generateOfflineData();
+      this.updateAll();
       this.log('info', 'Offline Programming Mode enabled');
       this.updateStatus(InstanceStatus.Ok, 'Offline Programming Mode');
     }
@@ -363,6 +369,20 @@ class ModuleInstance extends InstanceBase {
     getPresetCollectionList(this);
     getOutputList(this);
     getInputListSimplify(this);
+    // Poll input signal status for each input card slot
+    this.pollInputSignals();
+  }
+
+  /** Query R0103 for each input connector to get signal status */
+  pollInputSignals() {
+    if (!this.udp || !this.connectStatus) return;
+    const inputCardCount = this.config.inputCardCount || 1;
+    for (let slot = 0; slot < inputCardCount; slot++) {
+      for (let connector = 0; connector < 4; connector++) {
+        const cmd = JSON.stringify([{ cmd: 'R0103', param0: 0, param1: slot, param2: connector }]);
+        this.safeSend(Buffer.from(cmd));
+      }
+    }
   }
 
   getConfigFields() {
@@ -588,8 +608,8 @@ class ModuleInstance extends InstanceBase {
       ...config,
     };
 
-    // If size config changed, regenerate offline data
-    if (sizeChanged) {
+    // If size config changed and offline mode is on, regenerate offline data
+    if (sizeChanged && this.config.offlineMode) {
       this.enhancedState = { screens: {} };
       this.generateOfflineData();
       this.updateAll();
@@ -598,14 +618,23 @@ class ModuleInstance extends InstanceBase {
     // If offline mode toggled, update status immediately
     if (offlineModeChanged) {
       if (this.config.offlineMode) {
-        this.updateStatus(InstanceStatus.Ok, 'Offline Programming Mode');
+        this.enhancedState = { screens: {} };
+        this.generateOfflineData();
         this.updateAll();
-      } else if (!this.connectStatus) {
-        // Turning off offline mode while not connected
-        if (hasHost) {
-          this.updateStatus(InstanceStatus.Connecting);
-        } else {
-          this.updateStatus(InstanceStatus.Disconnected, 'No host configured');
+        this.updateStatus(InstanceStatus.Ok, 'Offline Programming Mode');
+      } else {
+        // Turning off offline mode — clear offline data
+        this.enhancedState = { screens: {} };
+        this.screenList = [];
+        this.presetCollectionList = [];
+        this.sourceList = [];
+        this.updateAll();
+        if (!this.connectStatus) {
+          if (hasHost) {
+            this.updateStatus(InstanceStatus.Connecting);
+          } else {
+            this.updateStatus(InstanceStatus.Disconnected, 'No host configured');
+          }
         }
       }
     }
@@ -724,6 +753,16 @@ class ModuleInstance extends InstanceBase {
         this.handleInitStatusResponse(res.data.rate);
         break;
       default:
+        // Handle R0103 input signal responses
+        if (res.cmd === 'R0103' && res.ack === 'Ok') {
+          const slotId = res.data?.slotId ?? 0;
+          const interfaceId = res.data?.interfaceId ?? 0;
+          const hasSignal = res.data?.iSignal === 1;
+          const inputKey = `input_${slotId + 1}_${interfaceId + 1}`;
+          this.inputSignalState[inputKey] = hasSignal;
+          this.setVariableValues({ [`${inputKey}_signal`]: hasSignal ? 'Active' : 'No Signal' });
+          this.checkFeedbacks('input_signal');
+        }
         break;
     }
     this.updateAll();
