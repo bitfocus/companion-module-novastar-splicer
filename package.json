@@ -14,7 +14,7 @@
 	},
 	"dependencies": {
 		"@companion-module/base": "~2.0.0",
-		"axios": "^1.13.5",
+		"axios": "^1.15.0",
 		"got": "^13.0.0",
 		"ping": "^0.4.4"
 	},
