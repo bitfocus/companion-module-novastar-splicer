@@ -1,10 +1,11 @@
 {
 	"name": "novastar-splicer",
-	"version": "3.0.2",
+	"version": "3.2.0",
 	"main": "./src/main.js",
 	"type": "module",
 	"scripts": {
-		"format": "prettier -w ."
+		"format": "prettier -w .",
+		"build": "companion-module-build"
 	},
 	"license": "MIT",
 	"repository": {
@@ -12,14 +13,13 @@
 		"url": "https://github.com/bitfocus/companion-module-novastar-splicer.git"
 	},
 	"dependencies": {
-		"@companion-module/base": "~1.5.1",
+		"@companion-module/base": "~2.0.0",
 		"axios": "^1.15.0",
 		"got": "^13.0.0",
-		"ping": "^0.4.4",
-		"yarn": "^1.22.21"
+		"ping": "^0.4.4"
 	},
 	"devDependencies": {
-		"@companion-module/tools": "^1.5.2",
+		"@companion-module/tools": "^2.7.1",
 		"eslint": "^9.30.1",
 		"eslint-config-prettier": "^10.1.5",
 		"eslint-plugin-prettier": "^5.5.1",
@@ -29,9 +29,12 @@
 		"webpack": "^5.100.2",
 		"webpack-cli": "^6.0.1"
 	},
+	"engines": {
+		"node": "^22.20"
+	},
 	"packageManager": "yarn@4.5.3",
 	"volta": {
-		"node": "18.12.1",
+		"node": "22.20.0",
 		"npm": "10.8.2"
 	}
 }

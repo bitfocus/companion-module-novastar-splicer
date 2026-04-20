@@ -2,5 +2,7 @@ node_modules/
 package-lock.json
 .yarn
 .cursor
-pkg.tgz
 pkg/
+pkg.tgz
+.DS_Store
+*.tgz

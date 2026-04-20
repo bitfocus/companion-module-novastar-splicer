@@ -5,7 +5,15 @@ import formatDropDownData from '../utils/formatDropDown.js';
 export const getFeedbacks = (instance) => {
   const { presetCollectionListDropDown, sourceListDropDown, presetDropDown, screenListDropDown, layerListDropDown } =
     formatDropDownData(instance);
+
+  // ENHANCED: Build screen choices for direct feedbacks from live screenList
+  const screenChoices = instance.screenList?.map((s) => ({
+    id: s.screenId,
+    label: s.name,
+  })) || [];
+
   return {
+    // ==================== ORIGINAL v3.0.2 FEEDBACKS ====================
     screen_selected: {
       type: 'boolean',
       name: 'Select Screen',
@@ -199,6 +207,203 @@ export const getFeedbacks = (instance) => {
           instance.selectedPresetInfo.screenId === screenId &&
           instance.selectedPresetInfo.presetId === presetId
         );
+      },
+    },
+
+    // ==================== ENHANCED: Direct per-screen feedbacks ====================
+
+    frozen_direct: {
+      type: 'boolean',
+      name: 'Screen Frozen (Direct)',
+      description: 'Shows frozen state for a specific screen without requiring screen selection.',
+      defaultStyle: {
+        bgcolor: combineRgb(0, 0, 255),
+        color: combineRgb(255, 255, 255),
+      },
+      options: [
+        {
+          type: 'dropdown',
+          label: 'Screen',
+          id: 'screenId',
+          default: screenChoices[0]?.id ?? 0,
+          choices: screenChoices,
+        },
+      ],
+      callback: (event) => {
+        const state = instance.enhancedState.screens[event.options.screenId];
+        return state ? state.frozen : false;
+      },
+    },
+    ftb_direct: {
+      type: 'boolean',
+      name: 'FTB (Direct)',
+      description: 'Shows FTB state for a specific screen without requiring screen selection.',
+      defaultStyle: {
+        bgcolor: combineRgb(255, 0, 0),
+        color: combineRgb(255, 255, 255),
+      },
+      options: [
+        {
+          type: 'dropdown',
+          label: 'Screen',
+          id: 'screenId',
+          default: screenChoices[0]?.id ?? 0,
+          choices: screenChoices,
+        },
+      ],
+      callback: (event) => {
+        const state = instance.enhancedState.screens[event.options.screenId];
+        return state ? state.ftb : false;
+      },
+    },
+    bkg_direct: {
+      type: 'boolean',
+      name: 'BKG (Direct)',
+      description: 'Shows BKG state for a specific screen without requiring screen selection.',
+      defaultStyle: {
+        bgcolor: combineRgb(0, 255, 0),
+        color: combineRgb(0, 0, 0),
+      },
+      options: [
+        {
+          type: 'dropdown',
+          label: 'Screen',
+          id: 'screenId',
+          default: screenChoices[0]?.id ?? 0,
+          choices: screenChoices,
+        },
+      ],
+      callback: (event) => {
+        const state = instance.enhancedState.screens[event.options.screenId];
+        return state ? state.bkg : false;
+      },
+    },
+    osd_text_direct: {
+      type: 'boolean',
+      name: 'OSD Text (Direct)',
+      description: 'Shows OSD Text state for a specific screen without requiring screen selection.',
+      defaultStyle: {
+        bgcolor: combineRgb(0, 255, 0),
+        color: combineRgb(0, 0, 0),
+      },
+      options: [
+        {
+          type: 'dropdown',
+          label: 'Screen',
+          id: 'screenId',
+          default: screenChoices[0]?.id ?? 0,
+          choices: screenChoices,
+        },
+      ],
+      callback: (event) => {
+        const state = instance.enhancedState.screens[event.options.screenId];
+        return state ? state.osdText : false;
+      },
+    },
+    osd_image_direct: {
+      type: 'boolean',
+      name: 'OSD Image (Direct)',
+      description: 'Shows OSD Image state for a specific screen without requiring screen selection.',
+      defaultStyle: {
+        bgcolor: combineRgb(0, 255, 0),
+        color: combineRgb(0, 0, 0),
+      },
+      options: [
+        {
+          type: 'dropdown',
+          label: 'Screen',
+          id: 'screenId',
+          default: screenChoices[0]?.id ?? 0,
+          choices: screenChoices,
+        },
+      ],
+      callback: (event) => {
+        const state = instance.enhancedState.screens[event.options.screenId];
+        return state ? state.osdImage : false;
+      },
+    },
+    brightness_match: {
+      type: 'boolean',
+      name: 'Brightness Match (Direct)',
+      description: 'True when a specific screen brightness matches the target value.',
+      defaultStyle: {
+        bgcolor: combineRgb(255, 255, 0),
+        color: combineRgb(0, 0, 0),
+      },
+      options: [
+        {
+          type: 'dropdown',
+          label: 'Screen',
+          id: 'screenId',
+          default: screenChoices[0]?.id ?? 0,
+          choices: screenChoices,
+        },
+        {
+          type: 'textinput',
+          label: 'Brightness (0-100)',
+          id: 'brightness',
+          default: '100',
+          useVariables: true,
+        },
+      ],
+      callback: (event) => {
+        const state = instance.enhancedState.screens[event.options.screenId];
+        return state ? Number(state.brightness) === Number(event.options.brightness) : false;
+      },
+    },
+    test_pattern_direct: {
+      type: 'boolean',
+      name: 'Test Pattern (Direct)',
+      description: 'Shows test pattern state for a specific screen without requiring screen selection.',
+      defaultStyle: {
+        bgcolor: combineRgb(0, 255, 0),
+        color: combineRgb(0, 0, 0),
+      },
+      options: [
+        {
+          type: 'dropdown',
+          label: 'Screen',
+          id: 'screenId',
+          default: screenChoices[0]?.id ?? 0,
+          choices: screenChoices,
+        },
+      ],
+      callback: (event) => {
+        const state = instance.enhancedState.screens[event.options.screenId];
+        return state ? state.testPattern : false;
+      },
+    },
+    input_signal: {
+      type: 'boolean',
+      name: 'Input Signal Active',
+      description: 'True when an input has an active signal.',
+      defaultStyle: {
+        bgcolor: combineRgb(0, 200, 0),
+        color: combineRgb(255, 255, 255),
+      },
+      options: [
+        {
+          type: 'dropdown',
+          label: 'Input',
+          id: 'inputKey',
+          default: 'input_1_1',
+          choices: (() => {
+            const choices = [];
+            const inputCardCount = instance.config?.inputCardCount || 1;
+            for (let slot = 0; slot < inputCardCount; slot++) {
+              for (let conn = 0; conn < 4; conn++) {
+                choices.push({
+                  id: `input_${slot + 1}_${conn + 1}`,
+                  label: `Input ${slot + 1}-${conn + 1}`,
+                });
+              }
+            }
+            return choices;
+          })(),
+        },
+      ],
+      callback: (event) => {
+        return instance.inputSignalState[event.options.inputKey] === true;
       },
     },
   };
