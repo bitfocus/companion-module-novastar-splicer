@@ -741,8 +741,7 @@ const getPerScreenBrightnessPresets = (instance) => {
       steps: [
         {
           down: [
-            { actionId: 'select_screen', options: { screenId, enable: 1 } },
-            { actionId: 'screen_brightness_add', options: {} },
+            { actionId: 'brightness_add_direct', options: { screenId } },
           ],
         },
       ],
@@ -763,8 +762,7 @@ const getPerScreenBrightnessPresets = (instance) => {
       steps: [
         {
           down: [
-            { actionId: 'select_screen', options: { screenId, enable: 1 } },
-            { actionId: 'screen_brightness_minus', options: {} },
+            { actionId: 'brightness_minus_direct', options: { screenId } },
           ],
         },
       ],

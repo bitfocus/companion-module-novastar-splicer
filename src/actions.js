@@ -529,6 +529,56 @@ export const getActions = (instance) => {
       },
     },
     // ==================== Direct per-screen actions ====================
+    // Direct Brightness Increase - per screen
+    brightness_add_direct: {
+      name: 'Brightness + (Direct)',
+      description: 'Increase brightness by 1% on a specific screen.',
+      options: [
+        {
+          type: 'dropdown',
+          label: 'Screen',
+          id: 'screenId',
+          default: screenListDropDown[0]?.id ?? null,
+          choices: screenListDropDown,
+        },
+      ],
+      callback: async (event) => {
+        const screenId = event.options.screenId;
+        const curScreenDetails = instance.screenList?.find((screen) => screen.screenId === screenId)?.details;
+        if (!curScreenDetails) return;
+        const brightness = Math.min(curScreenDetails.brightness + 1, 100);
+        curScreenDetails.brightness = brightness;
+        instance.updateEnhancedFromAction(screenId, 'brightness', brightness);
+        if (!instance.connectStatus) return;
+        const command = handleParams(ACTIONS_CMD.apply_screen_brightness, { screenId, brightness });
+        instance.safeSend(command);
+      },
+    },
+    // Direct Brightness Decrease - per screen
+    brightness_minus_direct: {
+      name: 'Brightness - (Direct)',
+      description: 'Decrease brightness by 1% on a specific screen.',
+      options: [
+        {
+          type: 'dropdown',
+          label: 'Screen',
+          id: 'screenId',
+          default: screenListDropDown[0]?.id ?? null,
+          choices: screenListDropDown,
+        },
+      ],
+      callback: async (event) => {
+        const screenId = event.options.screenId;
+        const curScreenDetails = instance.screenList?.find((screen) => screen.screenId === screenId)?.details;
+        if (!curScreenDetails) return;
+        const brightness = Math.max(curScreenDetails.brightness - 1, 0);
+        curScreenDetails.brightness = brightness;
+        instance.updateEnhancedFromAction(screenId, 'brightness', brightness);
+        if (!instance.connectStatus) return;
+        const command = handleParams(ACTIONS_CMD.apply_screen_brightness, { screenId, brightness });
+        instance.safeSend(command);
+      },
+    },
     // Direct Freeze (W040A) - per screen
     freeze_direct: {
       name: 'Freeze (Direct)',
