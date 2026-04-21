@@ -84,6 +84,8 @@ class ModuleInstance extends InstanceBase {
     });
     /** 加载的场景信息 */
     this.selectedPresetInfo = null;
+    /** Input signal state — keyed by `input_${slot+1}_${connector+1}` -> boolean */
+    this.inputSignalState = {};
   }
 
   handleGetAllData() {
@@ -120,12 +122,23 @@ class ModuleInstance extends InstanceBase {
     const { presetCollectionVariableDefinitions, presetCollectionDefaultVariableValues } =
       formatPresetCollectionVariable(this.presetCollectionList);
     const { sourceVariableDefinitions, sourceDefaultVariableValues } = formatSourceVariable(this.sourceList);
+
+    // Input signal variables (one per slot×connector based on configured input card count)
+    const inputSignalDefinitions = [];
+    const inputSignalValues = {};
+    for (const [inputKey, hasSignal] of Object.entries(this.inputSignalState)) {
+      const label = inputKey.replace('input_', '').replace('_', '-');
+      inputSignalDefinitions.push({ variableId: `${inputKey}_signal`, name: `Input ${label} Signal` });
+      inputSignalValues[`${inputKey}_signal`] = hasSignal ? 'Active' : 'No Signal';
+    }
+
     this.setVariableDefinitions([
       ...screenVariableDefinitions,
       ...layerVariableDefinitions,
       ...presetVariableDefinitions,
       ...presetCollectionVariableDefinitions,
       ...sourceVariableDefinitions,
+      ...inputSignalDefinitions,
     ]);
     this.setVariableValues({
       ...screenDefaultVariableValues,
@@ -133,6 +146,7 @@ class ModuleInstance extends InstanceBase {
       ...presetDefaultVariableValues,
       ...presetCollectionDefaultVariableValues,
       ...sourceDefaultVariableValues,
+      ...inputSignalValues,
     });
   }
 
@@ -143,9 +157,38 @@ class ModuleInstance extends InstanceBase {
     getPresetCollectionList(this);
     getOutputList(this);
     getInputListSimplify(this);
+    // Poll input signal state (R0103) for each input connector
+    this.pollInputSignals();
+  }
+
+  /**
+   * Query R0103 (Get Connector Information) for every input slot × connector.
+   * Per Novastar H Series Control Protocol V1.0.19 §4.3.3, each input card
+   * exposes 4 connectors indexed 0–3. The response's `iSignal` field is 1
+   * when an active signal is present (values 0 and 2 both mean inactive).
+   */
+  pollInputSignals() {
+    if (!this.udp) return;
+    const inputCardCount = this.config.inputCardCount || 1;
+    for (let slot = 0; slot < inputCardCount; slot++) {
+      for (let connector = 0; connector < 4; connector++) {
+        const cmd = JSON.stringify([{ cmd: 'R0103', param0: 0, param1: slot, param2: connector }]);
+        try {
+          this.udp.send(Buffer.from(cmd));
+        } catch (err) {
+          this.log('debug', `R0103 send failed: ${err.message}`);
+        }
+      }
+    }
   }
 
   getConfigFields() {
+    // Input card count dropdown (1–40), each card has 4 connectors
+    const inputCardChoices = [];
+    for (let i = 1; i <= 40; i++) {
+      inputCardChoices.push({ id: i, label: `${i} (${i * 4} inputs)` });
+    }
+
     return [
       {
         type: 'static-text',
@@ -169,6 +212,15 @@ class ModuleInstance extends InstanceBase {
         width: 6,
         default: '6000',
         regex: Regex.PORT,
+      },
+      {
+        type: 'dropdown',
+        id: 'inputCardCount',
+        label: 'Number of Input Cards',
+        width: 6,
+        default: 1,
+        choices: inputCardChoices,
+        tooltip: 'Number of input cards installed (each card has 4 connectors). Drives R0103 polling for input_N_M_signal variables and the input_signal feedback.',
       },
     ];
   }
@@ -393,6 +445,20 @@ class ModuleInstance extends InstanceBase {
         this.handleInitStatusResponse(res.data.rate);
         break;
       default:
+        // R0103 (Get Connector Information) — input signal state
+        if (res.cmd === 'R0103' && res.ack === 'Ok') {
+          const slotId = res.data?.slotId ?? 0;
+          const interfaceId = res.data?.interfaceId ?? 0;
+          // Protocol V1.0.19 §4.3.3: iSignal=1 active; 0 (no source) and 2 (disconnected) both inactive
+          const hasSignal = res.data?.iSignal === 1;
+          const inputKey = `input_${slotId + 1}_${interfaceId + 1}`;
+          const prev = this.inputSignalState[inputKey];
+          this.inputSignalState[inputKey] = hasSignal;
+          this.setVariableValues({ [`${inputKey}_signal`]: hasSignal ? 'Active' : 'No Signal' });
+          if (prev !== hasSignal) {
+            this.checkFeedbacks('input_signal');
+          }
+        }
         break;
     }
     this.updateAll();
