@@ -84,6 +84,87 @@ class ModuleInstance extends InstanceBase {
     });
     /** 加载的场景信息 */
     this.selectedPresetInfo = null;
+    /**
+     * Per-screen state for direct actions/feedbacks.
+     * Mirrors device truth (populated from R0401 apply_screen_details) and
+     * accepts optimistic updates from action callbacks for instant feedback.
+     */
+    this.enhancedState = { screens: {} };
+  }
+
+  /** Initialize per-screen enhanced state with defaults */
+  initEnhancedScreen(screenId) {
+    this.enhancedState.screens[screenId] = {
+      brightness: 100,
+      frozen: false,
+      ftb: false,
+      bkg: false,
+      osdText: false,
+      osdImage: false,
+      testPattern: false,
+    };
+  }
+
+  /** Update enhanced state from R0401 screen details response */
+  updateEnhancedFromDetails(screenId, details) {
+    if (!this.enhancedState.screens[screenId]) this.initEnhancedScreen(screenId);
+    const s = this.enhancedState.screens[screenId];
+    if (details.brightness !== undefined) s.brightness = details.brightness;
+    if (details.screenFrz !== undefined) s.frozen = details.screenFrz === 1;
+    // Protocol: blackout 0 = FTB enabled, 1 = FTB disabled (inverted)
+    if (details.blackout !== undefined) s.ftb = details.blackout === 0;
+    if (details.bkgEnable !== undefined) s.bkg = details.bkgEnable === 1;
+    if (details.textOsdEnable !== undefined) s.osdText = details.textOsdEnable === 1;
+    if (details.imgOsdEnable !== undefined) s.osdImage = details.imgOsdEnable === 1;
+  }
+
+  /** Optimistic update from action callback — instant variable + feedback refresh */
+  updateEnhancedFromAction(screenId, property, value) {
+    if (!this.enhancedState.screens[screenId]) this.initEnhancedScreen(screenId);
+    this.enhancedState.screens[screenId][property] = value;
+    const prefix = `screen_${screenId + 1}`;
+    const varMap = {
+      brightness: { key: `${prefix}_brightness`, val: value, feedbacks: ['brightness_match'] },
+      frozen: { key: `${prefix}_frozen`, val: value ? 'On' : 'Off', feedbacks: ['frozen_direct'] },
+      ftb: { key: `${prefix}_ftb`, val: value ? 'On' : 'Off', feedbacks: ['ftb_direct'] },
+      bkg: { key: `${prefix}_bkg`, val: value ? 'On' : 'Off', feedbacks: ['bkg_direct'] },
+      osdText: { key: `${prefix}_osd_text`, val: value ? 'On' : 'Off', feedbacks: ['osd_text_direct'] },
+      osdImage: { key: `${prefix}_osd_image`, val: value ? 'On' : 'Off', feedbacks: ['osd_image_direct'] },
+      testPattern: { key: `${prefix}_test_pattern`, val: value ? 'On' : 'Off', feedbacks: ['test_pattern_direct'] },
+    };
+    if (varMap[property]) {
+      this.setVariableValues({ [varMap[property].key]: varMap[property].val });
+      this.checkFeedbacks(...varMap[property].feedbacks);
+    }
+  }
+
+  /** Build per-screen enhanced variable defs + values */
+  getEnhancedVariables() {
+    const definitions = [];
+    const values = {};
+    for (const [screenIdStr, state] of Object.entries(this.enhancedState.screens)) {
+      const screenId = Number(screenIdStr);
+      const screen = this.screenList.find((s) => s.screenId === screenId);
+      const screenName = screen ? screen.name : `Screen ${screenId + 1}`;
+      const prefix = `screen_${screenId + 1}`;
+      definitions.push(
+        { variableId: `${prefix}_brightness`, name: `${screenName} Brightness` },
+        { variableId: `${prefix}_frozen`, name: `${screenName} Frozen` },
+        { variableId: `${prefix}_ftb`, name: `${screenName} FTB` },
+        { variableId: `${prefix}_bkg`, name: `${screenName} BKG` },
+        { variableId: `${prefix}_osd_text`, name: `${screenName} OSD Text` },
+        { variableId: `${prefix}_osd_image`, name: `${screenName} OSD Image` },
+        { variableId: `${prefix}_test_pattern`, name: `${screenName} Test Pattern` },
+      );
+      values[`${prefix}_brightness`] = state.brightness;
+      values[`${prefix}_frozen`] = state.frozen ? 'On' : 'Off';
+      values[`${prefix}_ftb`] = state.ftb ? 'On' : 'Off';
+      values[`${prefix}_bkg`] = state.bkg ? 'On' : 'Off';
+      values[`${prefix}_osd_text`] = state.osdText ? 'On' : 'Off';
+      values[`${prefix}_osd_image`] = state.osdImage ? 'On' : 'Off';
+      values[`${prefix}_test_pattern`] = state.testPattern ? 'On' : 'Off';
+    }
+    return { definitions, values };
   }
 
   /**
@@ -137,12 +218,15 @@ class ModuleInstance extends InstanceBase {
     const { presetCollectionVariableDefinitions, presetCollectionDefaultVariableValues } =
       formatPresetCollectionVariable(this.presetCollectionList);
     const { sourceVariableDefinitions, sourceDefaultVariableValues } = formatSourceVariable(this.sourceList);
+    const { definitions: enhancedDefs, values: enhancedVals } = this.getEnhancedVariables();
+
     this.setVariableDefinitions([
       ...screenVariableDefinitions,
       ...layerVariableDefinitions,
       ...presetVariableDefinitions,
       ...presetCollectionVariableDefinitions,
       ...sourceVariableDefinitions,
+      ...enhancedDefs,
     ]);
     this.setVariableValues({
       ...screenDefaultVariableValues,
@@ -150,6 +234,7 @@ class ModuleInstance extends InstanceBase {
       ...presetDefaultVariableValues,
       ...presetCollectionDefaultVariableValues,
       ...sourceDefaultVariableValues,
+      ...enhancedVals,
     });
   }
 
@@ -449,6 +534,8 @@ class ModuleInstance extends InstanceBase {
   dealScreenDetails(data) {
     if (this.screenList) {
       this.screenList.find((screen) => screen.screenId === data.screenId).details = data;
+      // Reconcile enhanced per-screen state from the device truth
+      this.updateEnhancedFromDetails(data.screenId, data);
     }
   }
 

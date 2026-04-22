@@ -178,6 +178,85 @@ export const getFeedbacks = (instance) => {
         }
       },
     },
+    // ==================== Direct per-screen feedbacks ====================
+    // Boolean feedbacks that read the enhancedState for a specific screen.
+    // Let operators show live state on per-screen buttons without requiring
+    // the screen to be selected first.
+    brightness_match: {
+      type: 'boolean',
+      name: 'Brightness Matches Value (Direct)',
+      description: 'True when the selected screen brightness equals the given value.',
+      defaultStyle: { bgcolor: combineRgb(0, 200, 0), color: combineRgb(255, 255, 255) },
+      options: [
+        { type: 'dropdown', label: 'Screen', id: 'screenId', default: screenListDropDown[0]?.id ?? null, choices: screenListDropDown },
+        { type: 'number', label: 'Value (0-100)', id: 'value', default: 100, min: 0, max: 100 },
+      ],
+      callback: (event) => {
+        const s = instance.enhancedState?.screens[event.options.screenId];
+        return s ? s.brightness === event.options.value : false;
+      },
+    },
+    frozen_direct: {
+      type: 'boolean',
+      name: 'Freeze State (Direct)',
+      description: 'True when the specific screen is frozen.',
+      defaultStyle: { bgcolor: combineRgb(0, 200, 255), color: combineRgb(0, 0, 0) },
+      options: [
+        { type: 'dropdown', label: 'Screen', id: 'screenId', default: screenListDropDown[0]?.id ?? null, choices: screenListDropDown },
+      ],
+      callback: (event) => instance.enhancedState?.screens[event.options.screenId]?.frozen === true,
+    },
+    ftb_direct: {
+      type: 'boolean',
+      name: 'FTB State (Direct)',
+      description: 'True when FTB is active on the specific screen.',
+      defaultStyle: { bgcolor: combineRgb(200, 0, 0), color: combineRgb(255, 255, 255) },
+      options: [
+        { type: 'dropdown', label: 'Screen', id: 'screenId', default: screenListDropDown[0]?.id ?? null, choices: screenListDropDown },
+      ],
+      callback: (event) => instance.enhancedState?.screens[event.options.screenId]?.ftb === true,
+    },
+    bkg_direct: {
+      type: 'boolean',
+      name: 'BKG State (Direct)',
+      description: 'True when BKG is enabled on the specific screen.',
+      defaultStyle: { bgcolor: combineRgb(0, 200, 0), color: combineRgb(0, 0, 0) },
+      options: [
+        { type: 'dropdown', label: 'Screen', id: 'screenId', default: screenListDropDown[0]?.id ?? null, choices: screenListDropDown },
+      ],
+      callback: (event) => instance.enhancedState?.screens[event.options.screenId]?.bkg === true,
+    },
+    osd_text_direct: {
+      type: 'boolean',
+      name: 'OSD Text State (Direct)',
+      description: 'True when OSD Text is enabled on the specific screen.',
+      defaultStyle: { bgcolor: combineRgb(0, 200, 0), color: combineRgb(0, 0, 0) },
+      options: [
+        { type: 'dropdown', label: 'Screen', id: 'screenId', default: screenListDropDown[0]?.id ?? null, choices: screenListDropDown },
+      ],
+      callback: (event) => instance.enhancedState?.screens[event.options.screenId]?.osdText === true,
+    },
+    osd_image_direct: {
+      type: 'boolean',
+      name: 'OSD Image State (Direct)',
+      description: 'True when OSD Image is enabled on the specific screen.',
+      defaultStyle: { bgcolor: combineRgb(0, 200, 0), color: combineRgb(0, 0, 0) },
+      options: [
+        { type: 'dropdown', label: 'Screen', id: 'screenId', default: screenListDropDown[0]?.id ?? null, choices: screenListDropDown },
+      ],
+      callback: (event) => instance.enhancedState?.screens[event.options.screenId]?.osdImage === true,
+    },
+    test_pattern_direct: {
+      type: 'boolean',
+      name: 'Test Pattern State (Direct)',
+      description: 'True when test pattern is enabled on the specific screen.',
+      defaultStyle: { bgcolor: combineRgb(255, 200, 0), color: combineRgb(0, 0, 0) },
+      options: [
+        { type: 'dropdown', label: 'Screen', id: 'screenId', default: screenListDropDown[0]?.id ?? null, choices: screenListDropDown },
+      ],
+      callback: (event) => instance.enhancedState?.screens[event.options.screenId]?.testPattern === true,
+    },
+    // ==================== End direct per-screen feedbacks ====================
     preset_loaded: {
       type: 'boolean',
       name: 'Load Preset',

@@ -402,6 +402,145 @@ export const getActions = (instance) => {
         });
       },
     },
+    // ==================== Direct per-screen actions ====================
+    // One-click, screen-targeted variants that don't require a prior select_screen.
+    // Each updates `enhancedState` optimistically for instant feedback then sends
+    // the protocol command. Device truth reconciles on the next R0401 details poll.
+    brightness_add_direct: {
+      name: 'Brightness + (Direct)',
+      description: 'Increase brightness by 1% on a specific screen (no select_screen needed).',
+      options: [
+        { type: 'dropdown', label: 'Screen', id: 'screenId', default: screenListDropDown[0]?.id ?? null, choices: screenListDropDown },
+      ],
+      callback: async (event) => {
+        const screenId = event.options.screenId;
+        const details = instance.screenList?.find((s) => s.screenId === screenId)?.details;
+        if (!details) return;
+        const brightness = Math.min((details.brightness ?? 100) + 1, 100);
+        details.brightness = brightness;
+        instance.updateEnhancedFromAction(screenId, 'brightness', brightness);
+        if (!instance.udp) return;
+        instance.udp.send(handleParams(ACTIONS_CMD.apply_screen_brightness, { screenId, brightness }));
+      },
+    },
+    brightness_minus_direct: {
+      name: 'Brightness - (Direct)',
+      description: 'Decrease brightness by 1% on a specific screen (no select_screen needed).',
+      options: [
+        { type: 'dropdown', label: 'Screen', id: 'screenId', default: screenListDropDown[0]?.id ?? null, choices: screenListDropDown },
+      ],
+      callback: async (event) => {
+        const screenId = event.options.screenId;
+        const details = instance.screenList?.find((s) => s.screenId === screenId)?.details;
+        if (!details) return;
+        const brightness = Math.max((details.brightness ?? 100) - 1, 0);
+        details.brightness = brightness;
+        instance.updateEnhancedFromAction(screenId, 'brightness', brightness);
+        if (!instance.udp) return;
+        instance.udp.send(handleParams(ACTIONS_CMD.apply_screen_brightness, { screenId, brightness }));
+      },
+    },
+    set_brightness: {
+      name: 'Set Brightness',
+      description: 'Set brightness of a specific screen to an absolute value (0-100). Supports variables.',
+      options: [
+        { type: 'dropdown', label: 'Screen', id: 'screenId', default: screenListDropDown[0]?.id ?? null, choices: screenListDropDown },
+        { type: 'textinput', label: 'Brightness (0-100)', id: 'brightness', default: '100', useVariables: true },
+      ],
+      callback: async (event) => {
+        const screenId = event.options.screenId;
+        const raw = await instance.parseVariablesInString(String(event.options.brightness));
+        const brightness = Math.max(0, Math.min(100, Math.round(Number(raw))));
+        if (isNaN(brightness)) {
+          instance.log('warn', `set_brightness: invalid value "${raw}"`);
+          return;
+        }
+        const details = instance.screenList?.find((s) => s.screenId === screenId)?.details;
+        if (details) details.brightness = brightness;
+        instance.updateEnhancedFromAction(screenId, 'brightness', brightness);
+        if (!instance.udp) return;
+        instance.udp.send(handleParams(ACTIONS_CMD.apply_screen_brightness, { screenId, brightness }));
+      },
+    },
+    freeze_direct: {
+      name: 'Freeze (Direct)',
+      description: 'Enable or disable freeze on a specific screen.',
+      options: [
+        { type: 'dropdown', label: 'Screen', id: 'screenId', default: screenListDropDown[0]?.id ?? null, choices: screenListDropDown },
+        { type: 'dropdown', label: 'State', id: 'state', default: 1, choices: [{ id: 1, label: 'Enable' }, { id: 0, label: 'Disable' }] },
+      ],
+      callback: async (event) => {
+        const screenId = event.options.screenId;
+        const enable = parseInt(event.options.state);
+        instance.updateEnhancedFromAction(screenId, 'frozen', enable === 1);
+        if (!instance.udp) return;
+        instance.udp.send(handleParams(ACTIONS_CMD.screen_frz, { screenId, enable }));
+      },
+    },
+    ftb_direct: {
+      name: 'FTB (Direct)',
+      description: 'Enable or disable Fade-to-Black on a specific screen.',
+      options: [
+        { type: 'dropdown', label: 'Screen', id: 'screenId', default: screenListDropDown[0]?.id ?? null, choices: screenListDropDown },
+        { type: 'dropdown', label: 'State', id: 'state', default: 1, choices: [{ id: 1, label: 'Enable' }, { id: 0, label: 'Disable' }] },
+      ],
+      callback: async (event) => {
+        const screenId = event.options.screenId;
+        const enable = parseInt(event.options.state);
+        instance.updateEnhancedFromAction(screenId, 'ftb', enable === 1);
+        if (!instance.udp) return;
+        // Protocol: blackout 0 = FTB on, 1 = FTB off (inverted)
+        instance.udp.send(handleParams(ACTIONS_CMD.black_screen, { screenId, type: enable === 1 ? 0 : 1 }));
+      },
+    },
+    bkg_direct: {
+      name: 'BKG (Direct)',
+      description: 'Enable or disable BKG on a specific screen.',
+      options: [
+        { type: 'dropdown', label: 'Screen', id: 'screenId', default: screenListDropDown[0]?.id ?? null, choices: screenListDropDown },
+        { type: 'dropdown', label: 'State', id: 'state', default: 1, choices: [{ id: 1, label: 'Enable' }, { id: 0, label: 'Disable' }] },
+      ],
+      callback: async (event) => {
+        const screenId = event.options.screenId;
+        const enable = parseInt(event.options.state);
+        instance.updateEnhancedFromAction(screenId, 'bkg', enable === 1);
+        if (!instance.udp) return;
+        instance.udp.send(handleParams(ACTIONS_CMD.bkg_switch, { screenId, enable, bkgId: 0 }));
+      },
+    },
+    osd_direct: {
+      name: 'OSD (Direct)',
+      description: 'Enable or disable OSD on a specific screen.',
+      options: [
+        { type: 'dropdown', label: 'Screen', id: 'screenId', default: screenListDropDown[0]?.id ?? null, choices: screenListDropDown },
+        { type: 'dropdown', label: 'Type', id: 'osdType', default: 'text', choices: [{ id: 'text', label: 'OSD Text' }, { id: 'image', label: 'OSD Image' }] },
+        { type: 'dropdown', label: 'State', id: 'state', default: 1, choices: [{ id: 1, label: 'Enable' }, { id: 0, label: 'Disable' }] },
+      ],
+      callback: async (event) => {
+        const screenId = event.options.screenId;
+        const enable = parseInt(event.options.state);
+        const osdType = event.options.osdType;
+        instance.updateEnhancedFromAction(screenId, osdType === 'image' ? 'osdImage' : 'osdText', enable === 1);
+        if (!instance.udp) return;
+        instance.udp.send(handleParams(ACTIONS_CMD.osd_switch, { screenId, Osd: { enable } }));
+      },
+    },
+    test_pattern_direct: {
+      name: 'Test Pattern (Direct)',
+      description: 'Enable or disable test pattern on a specific screen.',
+      options: [
+        { type: 'dropdown', label: 'Screen', id: 'screenId', default: screenListDropDown[0]?.id ?? null, choices: screenListDropDown },
+        { type: 'dropdown', label: 'State', id: 'state', default: 1, choices: [{ id: 1, label: 'Enable' }, { id: 0, label: 'Disable' }] },
+      ],
+      callback: async (event) => {
+        const screenId = event.options.screenId;
+        const enable = parseInt(event.options.state);
+        instance.updateEnhancedFromAction(screenId, 'testPattern', enable === 1);
+        if (!instance.udp) return;
+        instance.udp.send(handleParams(ACTIONS_CMD.test_pattern_switch, { screenId, enable, type: 0 }));
+      },
+    },
+    // ==================== End direct per-screen actions ====================
     screen_brightness_add: {
       name: 'Screen Brightness Add',
       description: 'Increase the brightness of the screen loaded by the selected sending card.',
