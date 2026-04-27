@@ -202,8 +202,83 @@ class ModuleInstance extends InstanceBase {
       ...config,
     };
 
+    // Offline Programming Mode: synthesize a virtual screen/layer/preset tree
+    // so variables, actions, and feedbacks all work without a device. Useful
+    // when building buttons for a show before rental/deployment hardware
+    // is on-site.
+    if (this.config.offlineMode) {
+      this.generateOfflineData();
+      this.updateAll();
+      this.log('info', 'Offline Programming Mode enabled');
+      this.updateStatus(InstanceStatus.Ok, 'Offline Programming Mode');
+      return;
+    }
+
     this.updateStatus(InstanceStatus.Connecting);
     this.initUDP();
+  }
+
+  /**
+   * Generate synthetic screenList/presetCollectionList/sourceList data from
+   * the configured screen and input card counts so offline programming can
+   * populate variable dropdowns and previews.
+   */
+  generateOfflineData() {
+    const screenCount = this.config.screenCount || 4;
+    const inputCardCount = this.config.inputCardCount || 1;
+    const PRESETS_PER_SCREEN = 20;
+
+    this.screenList = [];
+    for (let i = 0; i < screenCount; i++) {
+      this.screenList.push({
+        screenId: i,
+        name: `Screen ${i + 1}`,
+        layers: [
+          { layerId: 0, name: 'Layer 1' },
+          { layerId: 1, name: 'Layer 2' },
+          { layerId: 2, name: 'Layer 3' },
+          { layerId: 3, name: 'Layer 4' },
+        ],
+        presets: Array.from({ length: PRESETS_PER_SCREEN }, (_, p) => ({
+          presetId: p,
+          name: `Preset ${p + 1}`,
+        })),
+        details: {
+          screenId: i,
+          brightness: 100,
+          screenFrz: 0,
+          blackout: 1, // 1 = not blacked out (protocol inverted: 0=FTB on)
+          bkgEnable: 0,
+          textOsdEnable: 0,
+          imgOsdEnable: 0,
+        },
+      });
+    }
+
+    this.presetCollectionList = [];
+    // Synthetic input source entries so source dropdowns populate offline.
+    // `inputId = slot * 4 + conn` gives a unique identifier across all cards;
+    // formatSourceVariable builds `source_${inputId}_${cropId}` variable ids,
+    // so duplicate inputIds would collide and only the last entry would show.
+    this.sourceList = [];
+    for (let slot = 0; slot < inputCardCount; slot++) {
+      for (let conn = 0; conn < 4; conn++) {
+        const inputId = slot * 4 + conn;
+        this.sourceList.push({
+          inputId,
+          cropId: 255,
+          streamId: 0,
+          templateId: 0,
+          sourceType: 1,
+          groupName: 'Video Inputs',
+          name: `Input ${slot + 1}-${conn + 1}`,
+          inputName: `Input ${slot + 1}-${conn + 1}`,
+          slotId: slot,
+          interfaceId: conn,
+          online: 1,
+        });
+      }
+    }
   }
 
   /** 更新actions、presets、feedbacks */
@@ -248,6 +323,11 @@ class ModuleInstance extends InstanceBase {
   }
 
   getConfigFields() {
+    const screenCountChoices = [];
+    for (let i = 1; i <= 40; i++) screenCountChoices.push({ id: i, label: `${i}` });
+    const inputCardChoices = [];
+    for (let i = 1; i <= 40; i++) inputCardChoices.push({ id: i, label: `${i} (${i * 4} inputs)` });
+
     return [
       {
         type: 'static-text',
@@ -271,6 +351,39 @@ class ModuleInstance extends InstanceBase {
         width: 6,
         default: '6000',
         regex: Regex.PORT,
+      },
+      {
+        type: 'static-text',
+        id: 'offline_heading',
+        width: 12,
+        label: 'Offline Programming',
+        value:
+          'Enable Offline Programming Mode to build and test buttons against a synthetic device — useful when hardware arrives after the show is being programmed. Actions will be silently no-op for the UDP layer; variables and feedbacks populate from the counts below.',
+      },
+      {
+        type: 'checkbox',
+        id: 'offlineMode',
+        label: 'Enable Offline Programming Mode',
+        width: 6,
+        default: false,
+      },
+      {
+        type: 'dropdown',
+        id: 'screenCount',
+        label: 'Number of Screens',
+        width: 6,
+        default: 1,
+        choices: screenCountChoices,
+        tooltip: 'Used in offline mode to synthesize the screen list. Overridden by live device data when connected.',
+      },
+      {
+        type: 'dropdown',
+        id: 'inputCardCount',
+        label: 'Number of Input Cards',
+        width: 6,
+        default: 1,
+        choices: inputCardChoices,
+        tooltip: 'Used in offline mode to synthesize input source entries (each card has 4 connectors).',
       },
     ];
   }
@@ -389,11 +502,10 @@ class ModuleInstance extends InstanceBase {
   /** devices cmd handle end */
 
   async configUpdated(config) {
-    let resetConnection = false;
-
-    if (this.config.host != config.host) {
-      resetConnection = true;
-    }
+    const hostChanged = this.config.host != config.host;
+    const offlineModeChanged = this.config.offlineMode !== config.offlineMode;
+    const sizeChanged =
+      this.config.screenCount !== config.screenCount || this.config.inputCardCount !== config.inputCardCount;
 
     this.log('info', 'configUpdated module....');
 
@@ -402,16 +514,58 @@ class ModuleInstance extends InstanceBase {
       ...config,
     };
 
-    if (resetConnection) {
-      this.updateStatus(InstanceStatus.Connecting);
+    // If offline mode is on and size changed, regenerate synthetic data
+    if (sizeChanged && this.config.offlineMode) {
+      this.generateOfflineData();
+      this.updateAll();
+    }
 
-      // 停止心跳和初始化状态定时器，防止旧连接残留
+    // Handle offline mode toggle
+    if (offlineModeChanged) {
+      if (this.config.offlineMode) {
+        // Entering offline mode — tear down any live connection cleanly
+        if (this.udp) {
+          this.udp.destroy();
+          delete this.udp;
+        }
+        if (this.dataInterval) {
+          clearInterval(this.dataInterval);
+          this.dataInterval = null;
+        }
+        this.heartbeatManager.stop();
+        this.clearInitStatusTimer();
+        this.connectStatus = false;
+        this.generateOfflineData();
+        this.updateAll();
+        this.updateStatus(InstanceStatus.Ok, 'Offline Programming Mode');
+        return;
+      } else {
+        // Leaving offline mode — clear synthetic data and immediately fetch
+        // real device state so Presets/Feedback refresh without needing a
+        // host change or polling cycle.
+        this.screenList = [];
+        this.presetCollectionList = [];
+        this.sourceList = [];
+        this.connectStatus = false;
+        this.updateAll();
+        if (this.config.host) {
+          this.updateStatus(InstanceStatus.Connecting);
+          this.heartbeatManager.stop();
+          this.clearInitStatusTimer();
+          this.initUDP();
+          this.handleGetAllData();
+        } else {
+          this.updateStatus(InstanceStatus.Disconnected, 'No host configured');
+        }
+        return;
+      }
+    }
+
+    if (hostChanged && !this.config.offlineMode) {
+      this.updateStatus(InstanceStatus.Connecting);
       this.heartbeatManager.stop();
       this.clearInitStatusTimer();
-
-      // 重新初始化UDP
       this.initUDP();
-
       this.handleGetAllData();
     }
   }

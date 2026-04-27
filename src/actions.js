@@ -419,8 +419,8 @@ export const getActions = (instance) => {
         const brightness = Math.min((details.brightness ?? 100) + 1, 100);
         details.brightness = brightness;
         instance.updateEnhancedFromAction(screenId, 'brightness', brightness);
-        if (!instance.udp) return;
-        instance.udp.send(handleParams(ACTIONS_CMD.apply_screen_brightness, { screenId, brightness }));
+        // safeSend guards on missing udp internally
+        instance.safeSend(handleParams(ACTIONS_CMD.apply_screen_brightness, { screenId, brightness }));
       },
     },
     brightness_minus_direct: {
@@ -436,8 +436,8 @@ export const getActions = (instance) => {
         const brightness = Math.max((details.brightness ?? 100) - 1, 0);
         details.brightness = brightness;
         instance.updateEnhancedFromAction(screenId, 'brightness', brightness);
-        if (!instance.udp) return;
-        instance.udp.send(handleParams(ACTIONS_CMD.apply_screen_brightness, { screenId, brightness }));
+        // safeSend guards on missing udp internally
+        instance.safeSend(handleParams(ACTIONS_CMD.apply_screen_brightness, { screenId, brightness }));
       },
     },
     set_brightness: {
@@ -458,8 +458,8 @@ export const getActions = (instance) => {
         const details = instance.screenList?.find((s) => s.screenId === screenId)?.details;
         if (details) details.brightness = brightness;
         instance.updateEnhancedFromAction(screenId, 'brightness', brightness);
-        if (!instance.udp) return;
-        instance.udp.send(handleParams(ACTIONS_CMD.apply_screen_brightness, { screenId, brightness }));
+        // safeSend guards on missing udp internally
+        instance.safeSend(handleParams(ACTIONS_CMD.apply_screen_brightness, { screenId, brightness }));
       },
     },
     freeze_direct: {
@@ -473,8 +473,8 @@ export const getActions = (instance) => {
         const screenId = event.options.screenId;
         const enable = parseInt(event.options.state);
         instance.updateEnhancedFromAction(screenId, 'frozen', enable === 1);
-        if (!instance.udp) return;
-        instance.udp.send(handleParams(ACTIONS_CMD.screen_frz, { screenId, enable }));
+        // safeSend guards on missing udp internally
+        instance.safeSend(handleParams(ACTIONS_CMD.screen_frz, { screenId, enable }));
       },
     },
     ftb_direct: {
@@ -488,9 +488,9 @@ export const getActions = (instance) => {
         const screenId = event.options.screenId;
         const enable = parseInt(event.options.state);
         instance.updateEnhancedFromAction(screenId, 'ftb', enable === 1);
-        if (!instance.udp) return;
+        // safeSend guards on missing udp internally
         // Protocol: blackout 0 = FTB on, 1 = FTB off (inverted)
-        instance.udp.send(handleParams(ACTIONS_CMD.black_screen, { screenId, type: enable === 1 ? 0 : 1 }));
+        instance.safeSend(handleParams(ACTIONS_CMD.black_screen, { screenId, type: enable === 1 ? 0 : 1 }));
       },
     },
     bkg_direct: {
@@ -504,8 +504,8 @@ export const getActions = (instance) => {
         const screenId = event.options.screenId;
         const enable = parseInt(event.options.state);
         instance.updateEnhancedFromAction(screenId, 'bkg', enable === 1);
-        if (!instance.udp) return;
-        instance.udp.send(handleParams(ACTIONS_CMD.bkg_switch, { screenId, enable, bkgId: 0 }));
+        // safeSend guards on missing udp internally
+        instance.safeSend(handleParams(ACTIONS_CMD.bkg_switch, { screenId, enable, bkgId: 0 }));
       },
     },
     osd_direct: {
@@ -521,8 +521,8 @@ export const getActions = (instance) => {
         const enable = parseInt(event.options.state);
         const osdType = event.options.osdType;
         instance.updateEnhancedFromAction(screenId, osdType === 'image' ? 'osdImage' : 'osdText', enable === 1);
-        if (!instance.udp) return;
-        instance.udp.send(handleParams(ACTIONS_CMD.osd_switch, { screenId, Osd: { enable } }));
+        // safeSend guards on missing udp internally
+        instance.safeSend(handleParams(ACTIONS_CMD.osd_switch, { screenId, Osd: { enable } }));
       },
     },
     test_pattern_direct: {
@@ -536,8 +536,8 @@ export const getActions = (instance) => {
         const screenId = event.options.screenId;
         const enable = parseInt(event.options.state);
         instance.updateEnhancedFromAction(screenId, 'testPattern', enable === 1);
-        if (!instance.udp) return;
-        instance.udp.send(handleParams(ACTIONS_CMD.test_pattern_switch, { screenId, enable, type: 0 }));
+        // safeSend guards on missing udp internally
+        instance.safeSend(handleParams(ACTIONS_CMD.test_pattern_switch, { screenId, enable, type: 0 }));
       },
     },
     // ==================== End direct per-screen actions ====================
