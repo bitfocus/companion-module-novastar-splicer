@@ -53,6 +53,10 @@ export const ACTIONS_CMD = {
   get_device_init_status: 'R0118',
   /** 设备心跳协议 */
   device_heartbeat: 'W0120',
+  /** Save current screen brightness to LED receiving card (per screen) */
+  save_screen_brightness: 'W0417',
+  /** Global blackout — affects all screens at once */
+  blackout: 'W0700',
 };
 
 export const SCREEN_COUNT_H = 40;
