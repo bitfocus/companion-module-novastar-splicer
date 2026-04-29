@@ -90,6 +90,12 @@ class ModuleInstance extends InstanceBase {
      * accepts optimistic updates from action callbacks for instant feedback.
      */
     this.enhancedState = { screens: {} };
+    /**
+     * Per-connector input signal state. Keyed by `input_${slotId+1}_${interfaceId+1}`
+     * (1-based labels in the UI, 0-based on the wire). Populated from R0102
+     * (Get Slot Information) responses when input signal polling is enabled.
+     */
+    this.inputSignalState = {};
   }
 
   /** Initialize per-screen enhanced state with defaults */
@@ -295,6 +301,18 @@ class ModuleInstance extends InstanceBase {
     const { sourceVariableDefinitions, sourceDefaultVariableValues } = formatSourceVariable(this.sourceList);
     const { definitions: enhancedDefs, values: enhancedVals } = this.getEnhancedVariables();
 
+    // Input signal variables — only emitted when polling is enabled, so the
+    // feature is dead code (no defs, no values) when the toggle is off.
+    const inputSignalDefs = [];
+    const inputSignalVals = {};
+    if (this.config.inputSignalPolling) {
+      for (const [inputKey, hasSignal] of Object.entries(this.inputSignalState)) {
+        const label = inputKey.replace('input_', '').replace('_', '-');
+        inputSignalDefs.push({ variableId: `${inputKey}_signal`, name: `Input ${label} Signal` });
+        inputSignalVals[`${inputKey}_signal`] = hasSignal ? 'Active' : 'No Signal';
+      }
+    }
+
     this.setVariableDefinitions([
       ...screenVariableDefinitions,
       ...layerVariableDefinitions,
@@ -302,6 +320,7 @@ class ModuleInstance extends InstanceBase {
       ...presetCollectionVariableDefinitions,
       ...sourceVariableDefinitions,
       ...enhancedDefs,
+      ...inputSignalDefs,
     ]);
     this.setVariableValues({
       ...screenDefaultVariableValues,
@@ -310,6 +329,7 @@ class ModuleInstance extends InstanceBase {
       ...presetCollectionDefaultVariableValues,
       ...sourceDefaultVariableValues,
       ...enhancedVals,
+      ...inputSignalVals,
     });
   }
 
@@ -320,6 +340,33 @@ class ModuleInstance extends InstanceBase {
     getPresetCollectionList(this);
     getOutputList(this);
     getInputListSimplify(this);
+    // Opt-in input signal polling. Default off, no extra packets unless enabled.
+    if (this.config.inputSignalPolling) {
+      this.pollInputSignals();
+    }
+  }
+
+  /**
+   * Poll R0102 (Get Slot Information) once per installed slot. Each response
+   * carries an `interfaces[]` array with `iSignal` for all 4 connectors on
+   * that slot, so one call per slot covers every connector (75% fewer round
+   * trips than per-connector R0103 polling).
+   *
+   * Slot range is derived from `this.sourceList` (populated by the existing
+   * R0226 getInputListSimplify poll) rather than a static config, so we only
+   * poll slots that actually have cards installed.
+   */
+  pollInputSignals() {
+    if (!this.udp || !this.connectStatus) return;
+    const slotIds = new Set();
+    for (const src of this.sourceList ?? []) {
+      if (typeof src.slotId === 'number') slotIds.add(src.slotId);
+    }
+    if (slotIds.size === 0) return;
+    for (const slotId of slotIds) {
+      const cmd = JSON.stringify([{ cmd: ACTIONS_CMD.get_slot_info, param0: this.deviceId, param1: slotId }]);
+      this.safeSend(Buffer.from(cmd));
+    }
   }
 
   getConfigFields() {
@@ -384,6 +431,21 @@ class ModuleInstance extends InstanceBase {
         default: 1,
         choices: inputCardChoices,
         tooltip: 'Used in offline mode to synthesize input source entries (each card has 4 connectors).',
+      },
+      {
+        type: 'static-text',
+        id: 'input_signal_heading',
+        width: 12,
+        label: 'Input Signal Polling',
+        value:
+          'Optional feature for live operators who need to drive button feedback off whether an input connector has signal. When enabled, the module polls R0102 (Get Slot Information) once per installed slot on the regular getAllData tick and exposes input_N_M_signal variables and an input_signal boolean feedback. Slots are auto-detected from the existing source list, so no additional configuration is needed. Default off, leave it off if you do not need this.',
+      },
+      {
+        type: 'checkbox',
+        id: 'inputSignalPolling',
+        label: 'Enable Input Signal Polling',
+        width: 6,
+        default: false,
       },
     ];
   }
@@ -648,10 +710,51 @@ class ModuleInstance extends InstanceBase {
       case ACTIONS_CMD.get_device_init_status:
         this.handleInitStatusResponse(res.data.rate);
         break;
+      case ACTIONS_CMD.get_slot_info:
+        this.dealSlotInfo(res);
+        break;
       default:
         break;
     }
     this.updateAll();
+  }
+
+  /**
+   * R0102 response handler. Each response covers one slot and carries
+   * `interfaces[]` with `iSignal` per connector. Per protocol, iSignal=1
+   * means signal source connected; values 0 (no source) and 2 (disconnected)
+   * are both treated as inactive.
+   *
+   * Only fires while inputSignalPolling is enabled; the polling source loop
+   * checks the toggle so this case is unreachable when the feature is off.
+   */
+  dealSlotInfo(res) {
+    if (res.ack !== true) return;
+    const slotId = res.data?.slotId;
+    if (typeof slotId !== 'number') return;
+    const interfaces = res.data?.interfaces;
+    if (!Array.isArray(interfaces)) return;
+    const changedKeys = [];
+    for (const iface of interfaces) {
+      if (typeof iface.interfaceId !== 'number') continue;
+      const inputKey = `input_${slotId + 1}_${iface.interfaceId + 1}`;
+      const hasSignal = iface.iSignal === 1;
+      const prev = this.inputSignalState[inputKey];
+      this.inputSignalState[inputKey] = hasSignal;
+      if (prev !== hasSignal) changedKeys.push(inputKey);
+    }
+    // Push variable values for every interface in this response, so newly
+    // discovered connectors populate immediately (not just on state change).
+    const values = {};
+    for (const iface of interfaces) {
+      if (typeof iface.interfaceId !== 'number') continue;
+      const inputKey = `input_${slotId + 1}_${iface.interfaceId + 1}`;
+      values[`${inputKey}_signal`] = this.inputSignalState[inputKey] ? 'Active' : 'No Signal';
+    }
+    this.setVariableValues(values);
+    if (changedKeys.length > 0) {
+      this.checkFeedbacks('input_signal');
+    }
   }
   /** 处理屏幕列表 */
   dealScreenList(data) {

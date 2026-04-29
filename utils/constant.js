@@ -51,6 +51,8 @@ export const ACTIONS_CMD = {
   osd_switch: 'W040C',
   /** 获取设备初始化状态 */
   get_device_init_status: 'R0118',
+  /** Get Slot Information — returns interfaces[] with iSignal per connector */
+  get_slot_info: 'R0102',
   /** 设备心跳协议 */
   device_heartbeat: 'W0120',
 };
