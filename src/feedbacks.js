@@ -280,5 +280,50 @@ export const getFeedbacks = (instance) => {
         );
       },
     },
+    // Input signal feedback. Only registers when input signal polling is on
+    // in config, otherwise the feedback is unavailable in the UI (matches
+    // the variable-emission gate in main.js).
+    ...(instance.config?.inputSignalPolling
+      ? {
+          input_signal: {
+            type: 'boolean',
+            name: 'Input Signal Active',
+            description: 'True when the selected input connector has an active signal (R0102 iSignal=1).',
+            defaultStyle: {
+              bgcolor: combineRgb(0, 200, 0),
+              color: combineRgb(255, 255, 255),
+            },
+            options: [
+              {
+                type: 'dropdown',
+                label: 'Input',
+                id: 'inputKey',
+                // Choices derived from sourceList, so dropdown only shows
+                // connectors that actually exist on the connected device.
+                default:
+                  (() => {
+                    const first = (instance.sourceList ?? []).find(
+                      (s) => typeof s.slotId === 'number' && typeof s.interfaceId === 'number',
+                    );
+                    return first ? `input_${first.slotId + 1}_${first.interfaceId + 1}` : 'input_1_1';
+                  })(),
+                choices: (() => {
+                  const seen = new Set();
+                  const out = [];
+                  for (const s of instance.sourceList ?? []) {
+                    if (typeof s.slotId !== 'number' || typeof s.interfaceId !== 'number') continue;
+                    const id = `input_${s.slotId + 1}_${s.interfaceId + 1}`;
+                    if (seen.has(id)) continue;
+                    seen.add(id);
+                    out.push({ id, label: `Input ${s.slotId + 1}-${s.interfaceId + 1}` });
+                  }
+                  return out.length > 0 ? out : [{ id: 'input_1_1', label: 'Input 1-1' }];
+                })(),
+              },
+            ],
+            callback: (event) => instance.inputSignalState[event.options.inputKey] === true,
+          },
+        }
+      : {}),
   };
 };
