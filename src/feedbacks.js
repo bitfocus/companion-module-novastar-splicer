@@ -298,26 +298,25 @@ export const getFeedbacks = (instance) => {
                 type: 'dropdown',
                 label: 'Input',
                 id: 'inputKey',
-                // Choices derived from sourceList, so dropdown only shows
-                // connectors that actually exist on the connected device.
+                // Choices derived from inputSignalState (R0102-backed) so the
+                // dropdown matches the input_N_M_signal variables exactly. The
+                // R0226 sourceList uses a different field shape and isn't a
+                // reliable source for this enumeration.
                 default:
                   (() => {
-                    const first = (instance.sourceList ?? []).find(
-                      (s) => typeof s.slotId === 'number' && typeof s.interfaceId === 'number',
-                    );
-                    return first ? `input_${first.slotId + 1}_${first.interfaceId + 1}` : 'input_1_1';
+                    const keys = Object.keys(instance.inputSignalState ?? {}).sort();
+                    return keys[0] ?? 'input_1_1';
                   })(),
                 choices: (() => {
-                  const seen = new Set();
-                  const out = [];
-                  for (const s of instance.sourceList ?? []) {
-                    if (typeof s.slotId !== 'number' || typeof s.interfaceId !== 'number') continue;
-                    const id = `input_${s.slotId + 1}_${s.interfaceId + 1}`;
-                    if (seen.has(id)) continue;
-                    seen.add(id);
-                    out.push({ id, label: `Input ${s.slotId + 1}-${s.interfaceId + 1}` });
+                  const keys = Object.keys(instance.inputSignalState ?? {}).sort();
+                  if (keys.length === 0) {
+                    return [{ id: 'input_1_1', label: 'Input 1-1' }];
                   }
-                  return out.length > 0 ? out : [{ id: 'input_1_1', label: 'Input 1-1' }];
+                  return keys.map((inputKey) => {
+                    const m = inputKey.match(/^input_(\d+)_(\d+)$/);
+                    const label = m ? `Input ${m[1]}-${m[2]}` : inputKey;
+                    return { id: inputKey, label };
+                  });
                 })(),
               },
             ],
