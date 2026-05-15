@@ -823,7 +823,8 @@ const getSourceListPresets = (instance) => {
  */
 const getDirectScreenPresets = (instance) => {
   const out = {};
-  const brightnessLevels = [100, 75, 50, 25, 0];
+  // 5% steps from 100 down to 0, matching the pre-split working branch.
+  const brightnessLevels = [100, 95, 90, 85, 80, 75, 70, 65, 60, 55, 50, 45, 40, 35, 30, 25, 20, 15, 10, 5, 0];
 
   instance.screenList?.forEach((screen) => {
     const { name, screenId } = screen;
