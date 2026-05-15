@@ -859,12 +859,14 @@ const getDirectScreenPresets = (instance) => {
           {
             down: [
               { actionId: 'set_brightness', options: { screenId, brightness: String(pct) } },
-              // Visible 100 ms wait between Set Brightness and Save Brightness.
-              // Using Companion's internal:wait action so it shows up as a
-              // separate "internal: Wait" step in the button editor (operators
-              // can see and tweak it), instead of the hidden per-action delay.
-              { actionId: 'wait', options: { time: 100 } },
-              { actionId: 'save_brightness', options: { screenId } },
+              // Companion's preset loader expands a `delay` field on a preset
+              // action into a real `internal: wait` action in the imported
+              // button, so this renders as a visible "internal: Wait" step
+              // (Time expression: 100) operators can see and tweak. The
+              // splicer needs ~100 ms to apply Set Brightness before Save
+              // Brightness will persist the new value to the receiving card.
+              // Reference: bitfocus/companion PresetUtils.ts:convertActionsDelay
+              { actionId: 'save_brightness', options: { screenId }, delay: 100 },
             ],
             up: [],
           },
