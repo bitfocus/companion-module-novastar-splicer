@@ -835,7 +835,7 @@ const getDirectScreenPresets = (instance) => {
       type: 'button',
       category: 'Brightness',
       name: `${name} Brightness +`,
-      style: { ...baseStyle, text: `${name}\nBright +` },
+      style: { ...baseStyle, text: `$(${MODULE_NAME}:screenId_${screenId})\nBright +` },
       steps: [{ down: [{ actionId: 'brightness_add_direct', options: { screenId } }], up: [] }],
       feedbacks: [],
     };
@@ -843,7 +843,7 @@ const getDirectScreenPresets = (instance) => {
       type: 'button',
       category: 'Brightness',
       name: `${name} Brightness -`,
-      style: { ...baseStyle, text: `${name}\nBright -` },
+      style: { ...baseStyle, text: `$(${MODULE_NAME}:screenId_${screenId})\nBright -` },
       steps: [{ down: [{ actionId: 'brightness_minus_direct', options: { screenId } }], up: [] }],
       feedbacks: [],
     };
@@ -854,7 +854,7 @@ const getDirectScreenPresets = (instance) => {
         type: 'button',
         category: 'Brightness',
         name: `${name} Brightness ${pct}%`,
-        style: { ...baseStyle, text: `${name}\n${pct}%` },
+        style: { ...baseStyle, text: `$(${MODULE_NAME}:screenId_${screenId})\n${pct}%` },
         steps: [
           {
             down: [
@@ -879,7 +879,7 @@ const getDirectScreenPresets = (instance) => {
       type: 'button',
       category: 'Per-Screen Direct',
       name: `${name} Freeze`,
-      style: { ...baseStyle, text: `${name}\nFreeze` },
+      style: { ...baseStyle, text: `$(${MODULE_NAME}:screenId_${screenId})\nFreeze` },
       steps: [
         { down: [{ actionId: 'freeze_direct', options: { screenId, state: 1 } }], up: [] },
         { down: [{ actionId: 'freeze_direct', options: { screenId, state: 0 } }], up: [] },
@@ -894,7 +894,7 @@ const getDirectScreenPresets = (instance) => {
       type: 'button',
       category: 'Per-Screen Direct',
       name: `${name} FTB`,
-      style: { ...baseStyle, text: `${name}\nFTB` },
+      style: { ...baseStyle, text: `$(${MODULE_NAME}:screenId_${screenId})\nFTB` },
       steps: [
         { down: [{ actionId: 'ftb_direct', options: { screenId, state: 1 } }], up: [] },
         { down: [{ actionId: 'ftb_direct', options: { screenId, state: 0 } }], up: [] },
@@ -909,7 +909,7 @@ const getDirectScreenPresets = (instance) => {
       type: 'button',
       category: 'Per-Screen Direct',
       name: `${name} BKG`,
-      style: { ...baseStyle, text: `${name}\nBKG` },
+      style: { ...baseStyle, text: `$(${MODULE_NAME}:screenId_${screenId})\nBKG` },
       steps: [
         { down: [{ actionId: 'bkg_direct', options: { screenId, state: 1 } }], up: [] },
         { down: [{ actionId: 'bkg_direct', options: { screenId, state: 0 } }], up: [] },
@@ -924,7 +924,7 @@ const getDirectScreenPresets = (instance) => {
       type: 'button',
       category: 'Per-Screen Direct',
       name: `${name} OSD Text`,
-      style: { ...baseStyle, text: `${name}\nOSD Text` },
+      style: { ...baseStyle, text: `$(${MODULE_NAME}:screenId_${screenId})\nOSD Text` },
       steps: [
         { down: [{ actionId: 'osd_direct', options: { screenId, osdType: 'text', state: 1 } }], up: [] },
         { down: [{ actionId: 'osd_direct', options: { screenId, osdType: 'text', state: 0 } }], up: [] },
@@ -939,7 +939,7 @@ const getDirectScreenPresets = (instance) => {
       type: 'button',
       category: 'Per-Screen Direct',
       name: `${name} OSD Image`,
-      style: { ...baseStyle, text: `${name}\nOSD Img` },
+      style: { ...baseStyle, text: `$(${MODULE_NAME}:screenId_${screenId})\nOSD Img` },
       steps: [
         { down: [{ actionId: 'osd_direct', options: { screenId, osdType: 'image', state: 1 } }], up: [] },
         { down: [{ actionId: 'osd_direct', options: { screenId, osdType: 'image', state: 0 } }], up: [] },
@@ -956,7 +956,7 @@ const getDirectScreenPresets = (instance) => {
       type: 'button',
       category: 'Per-Screen Direct',
       name: `${name} Test Pattern`,
-      style: { ...baseStyle, text: `${name}\nTest` },
+      style: { ...baseStyle, text: `$(${MODULE_NAME}:screenId_${screenId})\nTest` },
       steps: [
         {
           down: [
@@ -983,7 +983,7 @@ const getDirectScreenPresets = (instance) => {
       type: 'button',
       category: 'Per-Screen Direct',
       name: `${name} PGM/PVW`,
-      style: { ...baseStyle, text: `${name}\nPGM/PVW`, size: '14' },
+      style: { ...baseStyle, text: `$(${MODULE_NAME}:screenId_${screenId})\nPGM/PVW`, size: '14' },
       steps: [
         {
           down: [
@@ -1004,12 +1004,12 @@ const getDirectScreenPresets = (instance) => {
         {
           feedbackId: 'pgm_pvw_switch',
           options: { type: PGM_PVW_TYPE.PGM },
-          style: { bgcolor: GREEN, color: BLACK, text: `${name}\nPGM` },
+          style: { bgcolor: GREEN, color: BLACK, text: `$(${MODULE_NAME}:screenId_${screenId})\nPGM` },
         },
         {
           feedbackId: 'pgm_pvw_switch',
           options: { type: PGM_PVW_TYPE.PVW },
-          style: { bgcolor: RED, color: BLACK, text: `${name}\nPVW` },
+          style: { bgcolor: RED, color: BLACK, text: `$(${MODULE_NAME}:screenId_${screenId})\nPVW` },
         },
       ],
     };
@@ -1019,7 +1019,7 @@ const getDirectScreenPresets = (instance) => {
       type: 'button',
       category: 'Per-Screen Direct',
       name: `${name} Take`,
-      style: { ...baseStyle, text: `${name}\nTake` },
+      style: { ...baseStyle, text: `$(${MODULE_NAME}:screenId_${screenId})\nTake` },
       steps: [
         {
           down: [
