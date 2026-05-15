@@ -117,7 +117,7 @@ Categories visible in the preset picker:
 | Preset Group | Preset Group recall. |
 | Source List | Source-switch buttons (per input). |
 | Display | Global PGM/PVW, Take, FTB, Volume Switch, Screen FRZ, Layer FRZ, Volume +/-, Brightness +/- (legacy), Test Pattern, BKG, OSD Text, OSD Image, **Blackout (W0700 global)**. |
-| **Brightness** | Per-screen Bright + / Bright -, plus per-screen fixed levels in 5% steps (100 / 95 / 90 / ... / 5 / 0 — 21 levels per screen). Each level button runs **Set Brightness then Save Brightness with a 50 ms delay** so the device has time to apply the new value before persisting it. Highlighted by the `brightness_match` feedback when the current level matches. |
+| **Brightness** | Per-screen Bright + / Bright -, plus per-screen fixed levels in 5% steps (100 / 95 / 90 / ... / 5 / 0 — 21 levels per screen). Each level button runs **Set Brightness then Save Brightness with a 100 ms delay** so the device has time to apply the new value before persisting it. Highlighted by the `brightness_match` feedback when the current level matches. |
 | **Per-Screen Direct** | Per-screen Freeze / FTB / BKG / OSD Text / OSD Image / Test Pattern / PGM/PVW / Take, each with the matching direct feedback for live state highlighting. |
 
 ## Offline Programming Mode
