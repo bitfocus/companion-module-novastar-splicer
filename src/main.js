@@ -197,9 +197,10 @@ class ModuleInstance extends InstanceBase {
     if (this.dataInterval) {
       clearInterval(this.dataInterval);
     }
+    const interval = Math.max(500, Math.min(30000, Number(this.config.pollInterval) || 1000));
     this.dataInterval = setInterval(() => {
       this.getAllData();
-    }, 10000);
+    }, interval);
   }
 
   async init(config) {
@@ -398,6 +399,16 @@ class ModuleInstance extends InstanceBase {
         width: 6,
         default: '6000',
         regex: Regex.PORT,
+      },
+      {
+        type: 'number',
+        id: 'pollInterval',
+        label: 'Poll Interval (ms)',
+        width: 6,
+        min: 500,
+        max: 30000,
+        default: 1000,
+        tooltip: 'How often to poll the device for state updates (500-30000ms). Lower = more responsive feedback at the cost of more UDP traffic.',
       },
       {
         type: 'static-text',
