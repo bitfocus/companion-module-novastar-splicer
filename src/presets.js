@@ -859,11 +859,12 @@ const getDirectScreenPresets = (instance) => {
           {
             down: [
               { actionId: 'set_brightness', options: { screenId, brightness: String(pct) } },
-              // 100 ms wait so the splicer has time to apply the new
-              // brightness before we tell it to persist that value to the
-              // receiving card. Matches the delay that proved reliable in
-              // field testing.
-              { actionId: 'save_brightness', options: { screenId }, delay: 100 },
+              // Visible 100 ms wait between Set Brightness and Save Brightness.
+              // Using Companion's internal:wait action so it shows up as a
+              // separate "internal: Wait" step in the button editor (operators
+              // can see and tweak it), instead of the hidden per-action delay.
+              { actionId: 'wait', options: { time: 100 } },
+              { actionId: 'save_brightness', options: { screenId } },
             ],
             up: [],
           },
