@@ -1,6 +1,13 @@
 import { combineRgb } from '@companion-module/base';
 import { MODULE_NAME, PGM_PVW_TYPE, TEST_PATTERN_TYPE } from '../utils/constant.js';
 
+const BLACK = combineRgb(0, 0, 0);
+const WHITE = combineRgb(255, 255, 255);
+const GREEN = combineRgb(0, 255, 0);
+const RED = combineRgb(255, 0, 0);
+const BLUE = combineRgb(0, 0, 255);
+const DARK_GREEN = combineRgb(0, 200, 0);
+
 /** 屏幕、图层、场景预设 */
 const getSLPPresets = (screenList) => {
   /** 选中屏幕 */
@@ -807,6 +814,251 @@ const getSourceListPresets = (instance) => {
   return sourceList;
 };
 
+/**
+ * Per-screen direct-control presets. One button per screen for each direct
+ * action (brightness, freeze, FTB, BKG, OSD text, OSD image, test pattern,
+ * PGM/PVW, Take). No select_screen prerequisite for the toggles that have a
+ * matching direct action; PGM/PVW, Take, and test pattern still funnel
+ * through select_screen since there is no `*_direct` action for those.
+ */
+const getDirectScreenPresets = (instance) => {
+  const out = {};
+  const brightnessLevels = [100, 75, 50, 25, 0];
+
+  instance.screenList?.forEach((screen) => {
+    const { name, screenId } = screen;
+    const baseStyle = { size: 'auto', color: WHITE, bgcolor: BLACK };
+
+    // ---- Brightness +/- ----
+    out[`direct_bright_up_${screenId}`] = {
+      type: 'button',
+      category: 'Brightness',
+      name: `${name} Brightness +`,
+      style: { ...baseStyle, text: `${name}\nBright +` },
+      steps: [{ down: [{ actionId: 'brightness_add_direct', options: { screenId } }], up: [] }],
+      feedbacks: [],
+    };
+    out[`direct_bright_down_${screenId}`] = {
+      type: 'button',
+      category: 'Brightness',
+      name: `${name} Brightness -`,
+      style: { ...baseStyle, text: `${name}\nBright -` },
+      steps: [{ down: [{ actionId: 'brightness_minus_direct', options: { screenId } }], up: [] }],
+      feedbacks: [],
+    };
+
+    // ---- Brightness fixed levels (with brightness_match feedback) ----
+    brightnessLevels.forEach((pct) => {
+      out[`set_bright_${screenId}_${pct}`] = {
+        type: 'button',
+        category: 'Brightness',
+        name: `${name} Brightness ${pct}%`,
+        style: { ...baseStyle, text: `${name}\n${pct}%` },
+        steps: [
+          {
+            down: [
+              { actionId: 'set_brightness', options: { screenId, brightness: String(pct) } },
+              { actionId: 'save_brightness', options: { screenId } },
+            ],
+            up: [],
+          },
+        ],
+        feedbacks: [
+          {
+            feedbackId: 'brightness_match',
+            options: { screenId, value: pct },
+            style: { bgcolor: DARK_GREEN, color: WHITE },
+          },
+        ],
+      };
+    });
+
+    // ---- Freeze toggle ----
+    out[`direct_freeze_${screenId}`] = {
+      type: 'button',
+      category: 'Per-Screen Direct',
+      name: `${name} Freeze`,
+      style: { ...baseStyle, text: `${name}\nFreeze` },
+      steps: [
+        { down: [{ actionId: 'freeze_direct', options: { screenId, state: 1 } }], up: [] },
+        { down: [{ actionId: 'freeze_direct', options: { screenId, state: 0 } }], up: [] },
+      ],
+      feedbacks: [
+        { feedbackId: 'frozen_direct', options: { screenId }, style: { bgcolor: BLUE, color: WHITE } },
+      ],
+    };
+
+    // ---- FTB toggle ----
+    out[`direct_ftb_${screenId}`] = {
+      type: 'button',
+      category: 'Per-Screen Direct',
+      name: `${name} FTB`,
+      style: { ...baseStyle, text: `${name}\nFTB` },
+      steps: [
+        { down: [{ actionId: 'ftb_direct', options: { screenId, state: 1 } }], up: [] },
+        { down: [{ actionId: 'ftb_direct', options: { screenId, state: 0 } }], up: [] },
+      ],
+      feedbacks: [
+        { feedbackId: 'ftb_direct', options: { screenId }, style: { bgcolor: RED, color: WHITE } },
+      ],
+    };
+
+    // ---- BKG toggle ----
+    out[`direct_bkg_${screenId}`] = {
+      type: 'button',
+      category: 'Per-Screen Direct',
+      name: `${name} BKG`,
+      style: { ...baseStyle, text: `${name}\nBKG` },
+      steps: [
+        { down: [{ actionId: 'bkg_direct', options: { screenId, state: 1 } }], up: [] },
+        { down: [{ actionId: 'bkg_direct', options: { screenId, state: 0 } }], up: [] },
+      ],
+      feedbacks: [
+        { feedbackId: 'bkg_direct', options: { screenId }, style: { bgcolor: GREEN, color: BLACK } },
+      ],
+    };
+
+    // ---- OSD Text toggle ----
+    out[`direct_osd_text_${screenId}`] = {
+      type: 'button',
+      category: 'Per-Screen Direct',
+      name: `${name} OSD Text`,
+      style: { ...baseStyle, text: `${name}\nOSD Text` },
+      steps: [
+        { down: [{ actionId: 'osd_direct', options: { screenId, osdType: 'text', state: 1 } }], up: [] },
+        { down: [{ actionId: 'osd_direct', options: { screenId, osdType: 'text', state: 0 } }], up: [] },
+      ],
+      feedbacks: [
+        { feedbackId: 'osd_text_direct', options: { screenId }, style: { bgcolor: GREEN, color: BLACK } },
+      ],
+    };
+
+    // ---- OSD Image toggle ----
+    out[`direct_osd_image_${screenId}`] = {
+      type: 'button',
+      category: 'Per-Screen Direct',
+      name: `${name} OSD Image`,
+      style: { ...baseStyle, text: `${name}\nOSD Img` },
+      steps: [
+        { down: [{ actionId: 'osd_direct', options: { screenId, osdType: 'image', state: 1 } }], up: [] },
+        { down: [{ actionId: 'osd_direct', options: { screenId, osdType: 'image', state: 0 } }], up: [] },
+      ],
+      feedbacks: [
+        { feedbackId: 'osd_image_direct', options: { screenId }, style: { bgcolor: GREEN, color: BLACK } },
+      ],
+    };
+
+    // ---- Test Pattern toggle ----
+    // No test_pattern_direct uses test_pattern_switch with select_screen,
+    // matching the pattern used in the pre-split working branch.
+    out[`direct_test_${screenId}`] = {
+      type: 'button',
+      category: 'Per-Screen Direct',
+      name: `${name} Test Pattern`,
+      style: { ...baseStyle, text: `${name}\nTest` },
+      steps: [
+        {
+          down: [
+            { actionId: 'select_screen', options: { screenId, enable: 1 } },
+            { actionId: 'test_pattern_switch', options: { testPattern: TEST_PATTERN_TYPE.OPEN } },
+          ],
+          up: [],
+        },
+        {
+          down: [
+            { actionId: 'select_screen', options: { screenId, enable: 1 } },
+            { actionId: 'test_pattern_switch', options: { testPattern: TEST_PATTERN_TYPE.CLOSE } },
+          ],
+          up: [],
+        },
+      ],
+      feedbacks: [
+        { feedbackId: 'test_pattern_direct', options: { screenId }, style: { bgcolor: GREEN, color: BLACK } },
+      ],
+    };
+
+    // ---- Per-screen PGM/PVW (select-then-act, no direct action exists) ----
+    out[`direct_pgm_pvw_${screenId}`] = {
+      type: 'button',
+      category: 'Per-Screen Direct',
+      name: `${name} PGM/PVW`,
+      style: { ...baseStyle, text: `${name}\nPGM/PVW`, size: '14' },
+      steps: [
+        {
+          down: [
+            { actionId: 'select_screen', options: { screenId, enable: 1 } },
+            { actionId: 'pgm_pvw_switch', options: { enNonTime: 0 } },
+          ],
+          up: [],
+        },
+        {
+          down: [
+            { actionId: 'select_screen', options: { screenId, enable: 1 } },
+            { actionId: 'pgm_pvw_switch', options: { enNonTime: 1 } },
+          ],
+          up: [],
+        },
+      ],
+      feedbacks: [
+        {
+          feedbackId: 'pgm_pvw_switch',
+          options: { type: PGM_PVW_TYPE.PGM },
+          style: { bgcolor: GREEN, color: BLACK, text: `${name}\nPGM` },
+        },
+        {
+          feedbackId: 'pgm_pvw_switch',
+          options: { type: PGM_PVW_TYPE.PVW },
+          style: { bgcolor: RED, color: BLACK, text: `${name}\nPVW` },
+        },
+      ],
+    };
+
+    // ---- Per-screen Take ----
+    out[`direct_take_${screenId}`] = {
+      type: 'button',
+      category: 'Per-Screen Direct',
+      name: `${name} Take`,
+      style: { ...baseStyle, text: `${name}\nTake` },
+      steps: [
+        {
+          down: [
+            { actionId: 'select_screen', options: { screenId, enable: 1 } },
+            { actionId: 'take_switch', options: { manualPlay: 1 } },
+          ],
+          up: [],
+        },
+        {
+          down: [
+            { actionId: 'select_screen', options: { screenId, enable: 1 } },
+            { actionId: 'take_switch', options: { manualPlay: 0 } },
+          ],
+          up: [],
+        },
+      ],
+      feedbacks: [
+        { feedbackId: 'pvw_take_selected', style: { bgcolor: GREEN, color: BLACK } },
+      ],
+    };
+  });
+
+  return out;
+};
+
+/** Global blackout preset (wraps the W0700 blackout action). */
+const getGlobalBlackoutPreset = () => ({
+  blackout_global: {
+    type: 'button',
+    category: 'Display',
+    name: 'Blackout',
+    style: { text: 'BLACKOUT', size: 'auto', color: WHITE, bgcolor: BLACK },
+    steps: [
+      { down: [{ actionId: 'blackout', options: { state: 1 } }], up: [] },
+      { down: [{ actionId: 'blackout', options: { state: 0 } }], up: [] },
+    ],
+    feedbacks: [],
+  },
+});
+
 export const getPresetDefinitions = function (instance) {
   // instance.log('info', JSON.stringify(instance.screenList));
   // instance.log('info', JSON.stringify(instance.sourceList));
@@ -818,5 +1070,7 @@ export const getPresetDefinitions = function (instance) {
     ...getPresetCollectionsPresets(instance),
     ...getSourceListPresets(instance),
     ...applyScreenPreset(),
+    ...getDirectScreenPresets(instance),
+    ...getGlobalBlackoutPreset(),
   };
 };
