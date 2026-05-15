@@ -769,7 +769,24 @@ class ModuleInstance extends InstanceBase {
   }
   /** 处理屏幕列表 */
   dealScreenList(data) {
-    this.screenList = data.screens;
+    // Preserve existing layers/presets/details on each screen while replacing
+    // the rest of the screen record. R0400 carries only top-level screen fields
+    // (screenId, name, etc.); layers come from R0500, presets from R0600,
+    // and details from R0401. If we wipe screenList on every R0400, the
+    // layer/preset/screen-detail presets briefly vanish during each poll
+    // cycle until the dependent responses arrive. At 10s polling this was
+    // hard to notice; at 1s polling it makes presets flicker on every tick.
+    const prev = this.screenList ?? [];
+    const merged = (data.screens ?? []).map((newScreen) => {
+      const existing = prev.find((s) => s.screenId === newScreen.screenId);
+      return {
+        ...newScreen,
+        layers: newScreen.layers ?? existing?.layers ?? [],
+        presets: newScreen.presets ?? existing?.presets ?? [],
+        details: newScreen.details ?? existing?.details,
+      };
+    });
+    this.screenList = merged;
     data.screens.forEach((screen) => {
       getLayerList(this, screen.screenId);
       getPresetList(this, screen.screenId);
