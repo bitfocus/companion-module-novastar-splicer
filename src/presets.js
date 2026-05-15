@@ -859,7 +859,11 @@ const getDirectScreenPresets = (instance) => {
           {
             down: [
               { actionId: 'set_brightness', options: { screenId, brightness: String(pct) } },
-              { actionId: 'save_brightness', options: { screenId } },
+              // 100 ms wait so the splicer has time to apply the new
+              // brightness before we tell it to persist that value to the
+              // receiving card. Matches the delay that proved reliable in
+              // field testing.
+              { actionId: 'save_brightness', options: { screenId }, delay: 100 },
             ],
             up: [],
           },
