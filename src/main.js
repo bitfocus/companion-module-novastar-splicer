@@ -209,6 +209,9 @@ class ModuleInstance extends InstanceBase {
       ...config,
     };
 
+    // Build banner so the loaded version is visible in the connection log.
+    this.log('info', `${PRODUCTS_INFORMATION}`);
+
     // Offline Programming Mode: synthesize a virtual screen/layer/preset tree
     // so variables, actions, and feedbacks all work without a device. Useful
     // when building buttons for a show before rental/deployment hardware
@@ -359,15 +362,15 @@ class ModuleInstance extends InstanceBase {
    */
   pollInputSignals() {
     if (!this.udp || !this.connectStatus) return;
-    const slotIds = new Set();
-    for (const src of this.sourceList ?? []) {
-      if (typeof src.slotId === 'number') slotIds.add(src.slotId);
-    }
-    if (slotIds.size === 0) return;
-    for (const slotId of slotIds) {
-      const cmd = JSON.stringify([{ cmd: ACTIONS_CMD.get_slot_info, param0: this.deviceId, param1: slotId }]);
-      this.safeSend(Buffer.from(cmd));
-    }
+    // Per Novastar H Series Control Protocol V1.0.19 §4.3.1, R0100
+    // (Get Device Details) returns slotList[] with the complete inventory of
+    // every installed card: slotId, cardType (1=Input, 2=Output, 3=Sender,
+    // 4=MVR), and interfaces[] including iSignal for each connector.
+    // One call enumerates every input slot and connector on the device — no
+    // need to scan slot numbers or guess at card layout. The response handler
+    // filters to cardType=1 slots so only real input connectors are surfaced.
+    const cmd = JSON.stringify([{ cmd: ACTIONS_CMD.get_device_details, param0: this.deviceId }]);
+    this.safeSend(Buffer.from(cmd));
   }
 
   getConfigFields() {
@@ -713,7 +716,6 @@ class ModuleInstance extends InstanceBase {
         break;
       case ACTIONS_CMD.get_input_list_simplify:
         this.sourceList = formatSourceList(res.data.inputs);
-        // this.log('debug', `get_input_list_simplify响应: ${JSON.stringify(res.data)}`);
         break;
       case ACTIONS_CMD.device_heartbeat:
         this.heartbeatManager.receive();
@@ -721,8 +723,8 @@ class ModuleInstance extends InstanceBase {
       case ACTIONS_CMD.get_device_init_status:
         this.handleInitStatusResponse(res.data.rate);
         break;
-      case ACTIONS_CMD.get_slot_info:
-        this.dealSlotInfo(res);
+      case ACTIONS_CMD.get_device_details:
+        this.dealDeviceDetails(res);
         break;
       default:
         break;
@@ -731,37 +733,62 @@ class ModuleInstance extends InstanceBase {
   }
 
   /**
-   * R0102 response handler. Each response covers one slot and carries
-   * `interfaces[]` with `iSignal` per connector. Per protocol, iSignal=1
-   * means signal source connected; values 0 (no source) and 2 (disconnected)
-   * are both treated as inactive.
+   * R0103 response handler. Each response covers one connector and carries:
+   *   { deviceId, slotId, interfaceId, interfaceType, iSignal, functionType }
+   * Per protocol, iSignal=1 means signal source connected; values 0 (no
+   * source) and 2 (disconnected) are both treated as inactive.
    *
-   * Only fires while inputSignalPolling is enabled; the polling source loop
-   * checks the toggle so this case is unreachable when the feature is off.
+   * Matches the V10 working build, which proved this pattern reliable on
+   * live H Series chassis. Only fires while inputSignalPolling is enabled;
+   * the polling loop checks the toggle so this case is unreachable when off.
    */
-  dealSlotInfo(res) {
+  /**
+   * R0100 response handler. Walks slotList[], keeps only slots where
+   * cardType === 1 (Input card slot), and for each one's interfaces[]
+   * builds an `input_${slotId+1}_${interfaceId+1}` entry in
+   * `inputSignalState` with iSignal === 1 → Active, else No Signal.
+   *
+   * Per protocol §4.3.2:
+   *   cardType: 0=No card, 1=Input, 2=Output, 3=Sender, 4=MVR
+   *   interfaces[].iSignal: 0=no source, 1=connected, 2=disconnected
+   */
+  dealDeviceDetails(res) {
     if (res.ack !== true) return;
-    const slotId = res.data?.slotId;
-    if (typeof slotId !== 'number') return;
-    const interfaces = res.data?.interfaces;
-    if (!Array.isArray(interfaces)) return;
+    const slotList = res.data?.slotList;
+    if (!Array.isArray(slotList)) return;
+
+
     const changedKeys = [];
-    for (const iface of interfaces) {
-      if (typeof iface.interfaceId !== 'number') continue;
-      const inputKey = `input_${slotId + 1}_${iface.interfaceId + 1}`;
-      const hasSignal = iface.iSignal === 1;
-      const prev = this.inputSignalState[inputKey];
-      this.inputSignalState[inputKey] = hasSignal;
-      if (prev !== hasSignal) changedKeys.push(inputKey);
-    }
-    // Push variable values for every interface in this response, so newly
-    // discovered connectors populate immediately (not just on state change).
     const values = {};
-    for (const iface of interfaces) {
-      if (typeof iface.interfaceId !== 'number') continue;
-      const inputKey = `input_${slotId + 1}_${iface.interfaceId + 1}`;
-      values[`${inputKey}_signal`] = this.inputSignalState[inputKey] ? 'Active' : 'No Signal';
+    const seenKeys = new Set();
+
+    for (const slot of slotList) {
+      // Only input card slots that are actually populated. Per protocol
+      // §4.3.2: cardType=1 is "Input card slot" (the bay), status=1 is
+      // "Normal" (card present and operational). Empty input bays report
+      // cardType=1 with status=0 and have to be skipped.
+      if (slot?.cardType !== 1 || slot?.status !== 1) continue;
+      const slotId = slot.slotId;
+      if (typeof slotId !== 'number') continue;
+      const interfaces = Array.isArray(slot.interfaces) ? slot.interfaces : [];
+      for (const iface of interfaces) {
+        const interfaceId = iface?.interfaceId;
+        if (typeof interfaceId !== 'number') continue;
+        const inputKey = `input_${slotId + 1}_${interfaceId + 1}`;
+        seenKeys.add(inputKey);
+        const hasSignal = iface.iSignal === 1;
+        const prev = this.inputSignalState[inputKey];
+        this.inputSignalState[inputKey] = hasSignal;
+        values[`${inputKey}_signal`] = hasSignal ? 'Active' : 'No Signal';
+        if (prev !== hasSignal) changedKeys.push(inputKey);
+      }
     }
+
+    // Drop stale entries for connectors that disappeared (card hot-removed).
+    for (const key of Object.keys(this.inputSignalState)) {
+      if (!seenKeys.has(key)) delete this.inputSignalState[key];
+    }
+
     this.setVariableValues(values);
     if (changedKeys.length > 0) {
       this.checkFeedbacks('input_signal');

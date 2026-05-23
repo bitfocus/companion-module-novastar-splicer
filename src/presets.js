@@ -1067,6 +1067,48 @@ const getGlobalBlackoutPreset = () => ({
   },
 });
 
+/**
+ * One status-button preset per real input connector. The set of connectors
+ * is derived from `inputSignalState` keys, which are populated from R0100
+ * responses — so only inputs that actually exist on the connected device
+ * appear here. Each preset has no press action (the button is informational)
+ * and uses the `input_signal` feedback to turn green when iSignal=1.
+ *
+ * Only emitted when input signal polling is enabled — same gate as the
+ * variables and the feedback.
+ */
+const getInputSignalPresets = (instance) => {
+  if (!instance.config?.inputSignalPolling) return {};
+  const out = {};
+  const keys = Object.keys(instance.inputSignalState ?? {}).sort();
+  for (const inputKey of keys) {
+    const m = inputKey.match(/^input_(\d+)_(\d+)$/);
+    if (!m) continue;
+    const slot = m[1];
+    const conn = m[2];
+    out[`input_signal_${slot}_${conn}`] = {
+      type: 'button',
+      category: 'Input Signal',
+      name: `Input ${slot}-${conn} Signal`,
+      style: {
+        text: `In ${slot}-${conn}\n$(${MODULE_NAME}:${inputKey}_signal)`,
+        size: 'auto',
+        color: WHITE,
+        bgcolor: BLACK,
+      },
+      steps: [{ down: [], up: [] }],
+      feedbacks: [
+        {
+          feedbackId: 'input_signal',
+          options: { inputKey },
+          style: { bgcolor: GREEN, color: BLACK },
+        },
+      ],
+    };
+  }
+  return out;
+};
+
 export const getPresetDefinitions = function (instance) {
   // instance.log('info', JSON.stringify(instance.screenList));
   // instance.log('info', JSON.stringify(instance.sourceList));
@@ -1080,5 +1122,6 @@ export const getPresetDefinitions = function (instance) {
     ...applyScreenPreset(),
     ...getDirectScreenPresets(instance),
     ...getGlobalBlackoutPreset(),
+    ...getInputSignalPresets(instance),
   };
 };

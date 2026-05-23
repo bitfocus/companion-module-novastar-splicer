@@ -1,6 +1,6 @@
 {
 	"name": "novastar-splicer",
-	"version": "3.0.3",
+	"version": "3.0.3-local.20260523-0221",
 	"main": "./src/main.js",
 	"type": "module",
 	"scripts": {

@@ -298,23 +298,23 @@ export const getFeedbacks = (instance) => {
                 type: 'dropdown',
                 label: 'Input',
                 id: 'inputKey',
-                // Choices derived from inputSignalState (R0102-backed) so the
-                // dropdown matches the input_N_M_signal variables exactly. The
-                // R0226 sourceList uses a different field shape and isn't a
-                // reliable source for this enumeration.
-                default:
-                  (() => {
-                    const keys = Object.keys(instance.inputSignalState ?? {}).sort();
-                    return keys[0] ?? 'input_1_1';
-                  })(),
+                // Choices derived from inputSignalState — only real
+                // slot/connector pairs that have actually returned R0102
+                // data appear in the dropdown. Updated on every poll tick,
+                // so the menu populates within ~1 second of enabling
+                // polling on a live device.
+                default: (() => {
+                  const keys = Object.keys(instance.inputSignalState ?? {}).sort();
+                  return keys[0] ?? 'input_1_1';
+                })(),
                 choices: (() => {
                   const keys = Object.keys(instance.inputSignalState ?? {}).sort();
                   if (keys.length === 0) {
-                    return [{ id: 'input_1_1', label: 'Input 1-1' }];
+                    return [{ id: 'input_1_1', label: '(waiting for device data...)' }];
                   }
                   return keys.map((inputKey) => {
                     const m = inputKey.match(/^input_(\d+)_(\d+)$/);
-                    const label = m ? `Input ${m[1]}-${m[2]}` : inputKey;
+                    const label = m ? `Input slot ${m[1]} conn ${m[2]}` : inputKey;
                     return { id: inputKey, label };
                   });
                 })(),

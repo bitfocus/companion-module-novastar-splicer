@@ -1,4 +1,4 @@
-export const PRODUCTS_INFORMATION = 'This module will allow you to control the splicer';
+export const PRODUCTS_INFORMATION = 'Novastar H Series Splicer module — Build: 3.0.3-local.20260523-0221';
 
 export const ACTIONS_CMD = {
   /** 获取屏幕列表 */
@@ -51,8 +51,8 @@ export const ACTIONS_CMD = {
   osd_switch: 'W040C',
   /** 获取设备初始化状态 */
   get_device_init_status: 'R0118',
-  /** Get Slot Information — returns interfaces[] with iSignal per connector */
-  get_slot_info: 'R0102',
+  /** Get Device Details — returns slotList[] with cardType + iSignal per connector */
+  get_device_details: 'R0100',
   /** 设备心跳协议 */
   device_heartbeat: 'W0120',
   /** Save current screen brightness to LED receiving card (per screen) */
