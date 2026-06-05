@@ -208,6 +208,15 @@ export const getFeedbacks = (instance) => {
       options: [
         { type: 'dropdown', label: 'Screen', id: 'screenId', default: screenListDropDown[0]?.id ?? null, choices: screenListDropDown },
         { type: 'colorpicker', label: 'Bar color', id: 'barColor', default: combineRgb(0, 200, 0), returnType: 'number' },
+        {
+          type: 'number',
+          label: 'Bar thickness (px)',
+          id: 'barWidth',
+          default: 18,
+          min: 4,
+          max: 48,
+          tooltip: 'How tall the bar is. Larger = chunkier / more obvious.',
+        },
       ],
       callback: (feedback) => {
         const s = instance.enhancedState?.screens[feedback.options.screenId];
@@ -215,16 +224,18 @@ export const getFeedbacks = (instance) => {
         const barColor = Number(feedback.options.barColor);
         const width = feedback.image?.width ?? 72;
         const height = feedback.image?.height ?? 72;
+        const barWidth = Math.max(4, Math.min(48, Number(feedback.options.barWidth) || 18));
         const options = {
           width,
           height,
           colors: [{ size: 100, color: barColor, background: barColor, backgroundOpacity: 64 }],
-          barLength: width - 10,
-          barWidth: 8,
+          barLength: width - 8,
+          barWidth,
           value,
           type: 'horizontal',
-          offsetX: 5,
-          offsetY: height > 58 ? 62 : 48,
+          offsetX: 4,
+          // Sit the (thicker) bar near the bottom of the button.
+          offsetY: Math.max(0, height - barWidth - 4),
           opacity: 255,
         };
         return { imageBuffer: Buffer.from(graphics.bar(options)).toString('base64') };
