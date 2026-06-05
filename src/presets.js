@@ -848,6 +848,27 @@ const getDirectScreenPresets = (instance) => {
       feedbacks: [],
     };
 
+    // ---- Brightness bar readout (graphical bar + numeric value) ----
+    // Info-only button: text shows the screen name and the live brightness
+    // variable, the brightness_bar feedback draws a horizontal progress bar
+    // along the bottom. Mirrors the Resolume progress-bar preset pattern.
+    out[`bright_bar_${screenId}`] = {
+      type: 'button',
+      category: 'Brightness',
+      name: `${name} Brightness Bar`,
+      style: {
+        ...baseStyle,
+        text: `$(${MODULE_NAME}:screenId_${screenId})\n$(${MODULE_NAME}:screen_${screenId + 1}_brightness)%`,
+      },
+      steps: [{ down: [], up: [] }],
+      feedbacks: [
+        {
+          feedbackId: 'brightness_bar',
+          options: { screenId, barColor: DARK_GREEN },
+        },
+      ],
+    };
+
     // ---- Brightness fixed levels (with brightness_match feedback) ----
     brightnessLevels.forEach((pct) => {
       out[`set_bright_${screenId}_${pct}`] = {

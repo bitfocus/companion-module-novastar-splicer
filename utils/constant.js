@@ -1,4 +1,4 @@
-export const PRODUCTS_INFORMATION = 'Novastar H Series Splicer module — Build: 3.0.3-local.20260523-0221';
+export const PRODUCTS_INFORMATION = 'Novastar H Series Splicer module — Build: 3.0.3-local.20260605-1145';
 
 export const ACTIONS_CMD = {
   /** 获取屏幕列表 */
