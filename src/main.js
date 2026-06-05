@@ -115,6 +115,7 @@ class ModuleInstance extends InstanceBase {
   updateEnhancedFromDetails(screenId, details) {
     if (!this.enhancedState.screens[screenId]) this.initEnhancedScreen(screenId);
     const s = this.enhancedState.screens[screenId];
+    const before = { ...s };
     if (details.brightness !== undefined) s.brightness = details.brightness;
     if (details.screenFrz !== undefined) s.frozen = details.screenFrz === 1;
     // Protocol: blackout 0 = FTB enabled, 1 = FTB disabled (inverted)
@@ -122,6 +123,20 @@ class ModuleInstance extends InstanceBase {
     if (details.bkgEnable !== undefined) s.bkg = details.bkgEnable === 1;
     if (details.textOsdEnable !== undefined) s.osdText = details.textOsdEnable === 1;
     if (details.imgOsdEnable !== undefined) s.osdImage = details.imgOsdEnable === 1;
+
+    // Redraw any direct feedback whose underlying state changed on this poll.
+    // Without this the advanced brightness_bar (and the boolean direct
+    // feedbacks) only redraw on optimistic action updates, not when the
+    // device reports a change made elsewhere (e.g. from the front panel).
+    const changed = [];
+    if (before.brightness !== s.brightness) changed.push('brightness_match', 'brightness_bar');
+    if (before.frozen !== s.frozen) changed.push('frozen_direct');
+    if (before.ftb !== s.ftb) changed.push('ftb_direct');
+    if (before.bkg !== s.bkg) changed.push('bkg_direct');
+    if (before.osdText !== s.osdText) changed.push('osd_text_direct');
+    if (before.osdImage !== s.osdImage) changed.push('osd_image_direct');
+    if (before.testPattern !== s.testPattern) changed.push('test_pattern_direct');
+    if (changed.length > 0) this.checkFeedbacks(...changed);
   }
 
   /** Optimistic update from action callback — instant variable + feedback refresh */
@@ -130,7 +145,7 @@ class ModuleInstance extends InstanceBase {
     this.enhancedState.screens[screenId][property] = value;
     const prefix = `screen_${screenId + 1}`;
     const varMap = {
-      brightness: { key: `${prefix}_brightness`, val: value, feedbacks: ['brightness_match'] },
+      brightness: { key: `${prefix}_brightness`, val: value, feedbacks: ['brightness_match', 'brightness_bar'] },
       frozen: { key: `${prefix}_frozen`, val: value ? 'On' : 'Off', feedbacks: ['frozen_direct'] },
       ftb: { key: `${prefix}_ftb`, val: value ? 'On' : 'Off', feedbacks: ['ftb_direct'] },
       bkg: { key: `${prefix}_bkg`, val: value ? 'On' : 'Off', feedbacks: ['bkg_direct'] },
