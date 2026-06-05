@@ -131,7 +131,10 @@ class ModuleInstance extends InstanceBase {
     const before = { ...s };
     if (details.brightness !== undefined) s.brightness = details.brightness;
     if (details.Freeze?.enable !== undefined) s.frozen = details.Freeze.enable === 1;
-    if (details.Ftb?.enable !== undefined) s.ftb = details.Ftb.enable === 1;
+    // FTB uses the INVERTED convention (known Novastar quirk): per protocol
+    // W0409 "Set Screen FTB", type 0 = FTB enabled, 1 = FTB disabled — the
+    // opposite of Freeze. So Ftb.enable === 0 means FTB is on.
+    if (details.Ftb?.enable !== undefined) s.ftb = details.Ftb.enable === 0;
     if (details.Bkg?.enable !== undefined) s.bkg = details.Bkg.enable === 1;
     if (details.Osd?.enable !== undefined) s.osdText = details.Osd.enable === 1;
     if (details.OsdImage?.enable !== undefined) s.osdImage = details.OsdImage.enable === 1;
