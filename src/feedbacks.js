@@ -288,7 +288,7 @@ export const getFeedbacks = (instance) => {
           input_signal: {
             type: 'boolean',
             name: 'Input Signal Active',
-            description: 'True when the selected input connector has an active signal (R0102 iSignal=1).',
+            description: 'True when the selected input connector has an active signal (R0100 slotList iSignal=1).',
             defaultStyle: {
               bgcolor: combineRgb(0, 200, 0),
               color: combineRgb(255, 255, 255),

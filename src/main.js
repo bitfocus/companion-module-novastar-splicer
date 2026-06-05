@@ -92,8 +92,8 @@ class ModuleInstance extends InstanceBase {
     this.enhancedState = { screens: {} };
     /**
      * Per-connector input signal state. Keyed by `input_${slotId+1}_${interfaceId+1}`
-     * (1-based labels in the UI, 0-based on the wire). Populated from R0102
-     * (Get Slot Information) responses when input signal polling is enabled.
+     * (1-based labels in the UI, 0-based on the wire). Populated from R0100
+     * (Get Device Details) responses when input signal polling is enabled.
      */
     this.inputSignalState = {};
   }
@@ -347,26 +347,31 @@ class ModuleInstance extends InstanceBase {
   }
 
   /**
-   * Poll R0102 (Get Slot Information) once per installed slot. Each response
-   * carries an `interfaces[]` array with `iSignal` for all 4 connectors on
-   * that slot, so one call per slot covers every connector (75% fewer round
-   * trips than per-connector R0103 polling).
+   * Poll R0100 (Get Device Details) once per cycle. Per Novastar H Series
+   * Control Protocol V1.0.19 §4.3.1, R0100 returns `slotList[]` — the
+   * complete inventory of every card installed in the device. Each slot
+   * entry carries `cardType` (0=No card, 1=Input, 2=Output, 3=Sender,
+   * 4=MVR), `status` (0=Abnormal, 1=Normal), and an `interfaces[]` array
+   * with `iSignal` per connector.
    *
-   * Slot range is derived from `this.sourceList` (populated by the existing
-   * R0226 getInputListSimplify poll) rather than a static config, so we only
-   * poll slots that actually have cards installed.
+   * A single R0100 packet therefore enumerates every input on every card
+   * without us having to scan slot numbers, derive slot ranges from
+   * sourceList, or know the chassis layout in advance. The response
+   * handler filters to `cardType === 1 && status === 1` so empty input
+   * bays and output / sender / MVR cards never pollute the input set.
+   *
+   * Replaces an earlier per-slot R0102 design (NovaStar's first
+   * recommendation in #38) and the original per-connector R0103 polling
+   * (#38 v1). R0100 is strictly better than both:
+   *   - 1 packet per cycle vs N
+   *   - Protocol-documented enumeration with no slot-number guessing
+   *   - Automatic empty-bay and non-input-card filtering via status + cardType
    */
   pollInputSignals() {
     if (!this.udp || !this.connectStatus) return;
-    const slotIds = new Set();
-    for (const src of this.sourceList ?? []) {
-      if (typeof src.slotId === 'number') slotIds.add(src.slotId);
-    }
     if (slotIds.size === 0) return;
-    for (const slotId of slotIds) {
-      const cmd = JSON.stringify([{ cmd: ACTIONS_CMD.get_slot_info, param0: this.deviceId, param1: slotId }]);
-      this.safeSend(Buffer.from(cmd));
-    }
+    const cmd = JSON.stringify([{ cmd: ACTIONS_CMD.get_device_details, param0: this.deviceId }]);
+    this.safeSend(Buffer.from(cmd));
   }
 
   getConfigFields() {
@@ -438,7 +443,7 @@ class ModuleInstance extends InstanceBase {
         width: 12,
         label: 'Input Signal Polling',
         value:
-          'Optional feature for live operators who need to drive button feedback off whether an input connector has signal. When enabled, the module polls R0102 (Get Slot Information) once per installed slot on the regular getAllData tick and exposes input_N_M_signal variables and an input_signal boolean feedback. Slots are auto-detected from the existing source list, so no additional configuration is needed. Default off, leave it off if you do not need this.',
+          'Optional feature for live operators who need to drive button feedback off whether an input connector has signal. When enabled, the module sends one R0100 (Get Device Details) request per getAllData tick. The device returns its full slotList[], which the module filters to populated input cards (cardType=1, status=1) and exposes as input_N_M_signal variables and an input_signal boolean feedback. No card-count configuration is needed; the device tells us. Default off, leave it off if you do not need this.',
       },
       {
         type: 'checkbox',
@@ -710,8 +715,8 @@ class ModuleInstance extends InstanceBase {
       case ACTIONS_CMD.get_device_init_status:
         this.handleInitStatusResponse(res.data.rate);
         break;
-      case ACTIONS_CMD.get_slot_info:
-        this.dealSlotInfo(res);
+      case ACTIONS_CMD.get_device_details:
+        this.dealDeviceDetails(res);
         break;
       default:
         break;
@@ -720,37 +725,56 @@ class ModuleInstance extends InstanceBase {
   }
 
   /**
-   * R0102 response handler. Each response covers one slot and carries
-   * `interfaces[]` with `iSignal` per connector. Per protocol, iSignal=1
-   * means signal source connected; values 0 (no source) and 2 (disconnected)
-   * are both treated as inactive.
+   * R0100 response handler. Walks slotList[], keeps only slots where the
+   * card is an installed, operational input card (cardType=1 && status=1),
+   * and for each one's interfaces[] populates inputSignalState. Per
+   * protocol §4.3.2:
    *
-   * Only fires while inputSignalPolling is enabled; the polling source loop
-   * checks the toggle so this case is unreachable when the feature is off.
+   *   cardType: 0=No card inserted, 1=Input, 2=Output, 3=Sender, 4=MVR
+   *   status:   0=Abnormal, 1=Normal
+   *   iSignal:  0=no source, 1=connected, 2=disconnected
+   *
+   * Treats iSignal=1 as Active; values 0 and 2 both fall through to No
+   * Signal. Drops stale entries when a card is hot-removed so the
+   * variable / feedback set stays in sync with the live device.
+   *
+   * Only fires while inputSignalPolling is enabled; the polling loop
+   * checks the toggle so this case is unreachable when off.
    */
-  dealSlotInfo(res) {
+  dealDeviceDetails(res) {
     if (res.ack !== true) return;
-    const slotId = res.data?.slotId;
-    if (typeof slotId !== 'number') return;
-    const interfaces = res.data?.interfaces;
-    if (!Array.isArray(interfaces)) return;
+    const slotList = res.data?.slotList;
+    if (!Array.isArray(slotList)) return;
+
     const changedKeys = [];
-    for (const iface of interfaces) {
-      if (typeof iface.interfaceId !== 'number') continue;
-      const inputKey = `input_${slotId + 1}_${iface.interfaceId + 1}`;
-      const hasSignal = iface.iSignal === 1;
-      const prev = this.inputSignalState[inputKey];
-      this.inputSignalState[inputKey] = hasSignal;
-      if (prev !== hasSignal) changedKeys.push(inputKey);
-    }
-    // Push variable values for every interface in this response, so newly
-    // discovered connectors populate immediately (not just on state change).
     const values = {};
-    for (const iface of interfaces) {
-      if (typeof iface.interfaceId !== 'number') continue;
-      const inputKey = `input_${slotId + 1}_${iface.interfaceId + 1}`;
-      values[`${inputKey}_signal`] = this.inputSignalState[inputKey] ? 'Active' : 'No Signal';
+    const seenKeys = new Set();
+
+    for (const slot of slotList) {
+      // Only operational input cards. Empty bays return cardType=1 too on
+      // some chassis but status=0, so the status check is required.
+      if (slot?.cardType !== 1 || slot?.status !== 1) continue;
+      const slotId = slot.slotId;
+      if (typeof slotId !== 'number') continue;
+      const interfaces = Array.isArray(slot.interfaces) ? slot.interfaces : [];
+      for (const iface of interfaces) {
+        const interfaceId = iface?.interfaceId;
+        if (typeof interfaceId !== 'number') continue;
+        const inputKey = `input_${slotId + 1}_${interfaceId + 1}`;
+        seenKeys.add(inputKey);
+        const hasSignal = iface.iSignal === 1;
+        const prev = this.inputSignalState[inputKey];
+        this.inputSignalState[inputKey] = hasSignal;
+        values[`${inputKey}_signal`] = hasSignal ? 'Active' : 'No Signal';
+        if (prev !== hasSignal) changedKeys.push(inputKey);
+      }
     }
+
+    // Drop stale entries for connectors that disappeared (card hot-removed).
+    for (const key of Object.keys(this.inputSignalState)) {
+      if (!seenKeys.has(key)) delete this.inputSignalState[key];
+    }
+
     this.setVariableValues(values);
     if (changedKeys.length > 0) {
       this.checkFeedbacks('input_signal');
