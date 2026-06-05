@@ -501,22 +501,23 @@ export const getActions = (instance) => {
         { type: 'dropdown', label: 'State', id: 'state', default: 1, choices: [{ id: 1, label: 'Enable' }, { id: 0, label: 'Disable' }] },
         {
           type: 'number',
-          label: 'BKG ID (when enabling)',
+          label: 'BKG (when enabling)',
           id: 'bkgId',
-          default: 0,
-          min: 0,
-          max: 255,
-          tooltip: 'Which stored background to show. Ignored when disabling. Matches the BKG ID on the device (see the screen_N_bkg_id variable).',
+          default: 1,
+          min: 1,
+          max: 256,
+          tooltip: 'Which stored background to show (1-based, matches the screen_N_bkg_id variable). Ignored when disabling.',
         },
       ],
       callback: async (event) => {
         const screenId = event.options.screenId;
         const enable = parseInt(event.options.state);
-        const bkgId = Math.max(0, Math.min(255, Number(event.options.bkgId) || 0));
+        // UI is 1-based; the device bkgId is 0-based.
+        const deviceBkgId = Math.max(0, Math.min(255, (Number(event.options.bkgId) || 1) - 1));
         instance.updateEnhancedFromAction(screenId, 'bkg', enable === 1);
-        if (enable === 1) instance.updateEnhancedFromAction(screenId, 'bkgId', bkgId);
+        if (enable === 1) instance.updateEnhancedFromAction(screenId, 'bkgId', deviceBkgId);
         // safeSend guards on missing udp internally
-        instance.safeSend(handleParams(ACTIONS_CMD.bkg_switch, { screenId, enable, bkgId }));
+        instance.safeSend(handleParams(ACTIONS_CMD.bkg_switch, { screenId, enable, bkgId: deviceBkgId }));
       },
     },
     osd_direct: {

@@ -199,7 +199,8 @@ class ModuleInstance extends InstanceBase {
       values[`${prefix}_frozen`] = state.frozen ? 'On' : 'Off';
       values[`${prefix}_ftb`] = state.ftb ? 'On' : 'Off';
       values[`${prefix}_bkg`] = state.bkg ? 'On' : 'Off';
-      values[`${prefix}_bkg_id`] = state.bkgId ?? 0;
+      // Display 1-based to match the rest of the UI (device bkgId is 0-based).
+      values[`${prefix}_bkg_id`] = (state.bkgId ?? 0) + 1;
       values[`${prefix}_osd_text`] = state.osdText ? 'On' : 'Off';
       values[`${prefix}_osd_image`] = state.osdImage ? 'On' : 'Off';
       values[`${prefix}_test_pattern`] = state.testPattern ? 'On' : 'Off';
