@@ -96,8 +96,6 @@ class ModuleInstance extends InstanceBase {
      * (Get Slot Information) responses when input signal polling is enabled.
      */
     this.inputSignalState = {};
-    /** Per-connector user-assigned name (from R0226 source list), keyed like inputSignalState */
-    this.inputSignalNames = {};
   }
 
   /** Initialize per-screen enhanced state with defaults */
@@ -350,9 +348,6 @@ class ModuleInstance extends InstanceBase {
         const label = inputKey.replace('input_', '').replace('_', '-');
         inputSignalDefs.push({ variableId: `${inputKey}_signal`, name: `Input ${label} Signal` });
         inputSignalVals[`${inputKey}_signal`] = hasSignal ? 'Active' : 'No Signal';
-        // Companion-side custom name variable (joined from R0226 source list)
-        inputSignalDefs.push({ variableId: `${inputKey}_name`, name: `Input ${label} Name` });
-        inputSignalVals[`${inputKey}_name`] = this.inputSignalNames[inputKey] ?? `Input ${label}`;
       }
     }
 
@@ -734,12 +729,6 @@ class ModuleInstance extends InstanceBase {
   UDPResponse(res) {
     // 发出UDP响应事件，供串行请求监听
     this.emit('udp_response', res);
-    // DIAGNOSTIC: log the cmd + ack of the input-list response specifically,
-    // and dump its full payload, so we can see what (if anything) R0226 and
-    // R0200 return on this device. Filtered to input-list cmds to avoid noise.
-    if (res.cmd === 'R0226' || res.cmd === 'R0200') {
-      console.log(`INPUTLIST ${res.cmd} ack=${res.ack} data=${JSON.stringify(res.data)}`);
-    }
     switch (res.cmd) {
       case ACTIONS_CMD.get_screen_list:
         this.dealScreenList(res.data);
@@ -756,17 +745,10 @@ class ModuleInstance extends InstanceBase {
 
         break;
       case ACTIONS_CMD.apply_screen_details:
-        console.log('apply_screen_details', JSON.stringify(res.data));
         this.dealScreenDetails(res.data);
         break;
       case ACTIONS_CMD.get_input_list_simplify:
         this.sourceList = formatSourceList(res.data.inputs);
-        // DIAGNOSTIC: dump the full R0226 response keys + first input + the
-        // formatted sourceList so we can see the real field shape and figure
-        // out how to join the user-assigned name to a connector.
-        console.log('R0226 data keys', JSON.stringify(Object.keys(res.data ?? {})));
-        console.log('R0226 raw inputs', JSON.stringify(res.data?.inputs ?? null));
-        console.log('R0226 sourceList[0]', JSON.stringify(this.sourceList?.[0] ?? null));
         break;
       case ACTIONS_CMD.device_heartbeat:
         this.heartbeatManager.receive();
@@ -848,17 +830,6 @@ class ModuleInstance extends InstanceBase {
         this.inputSignalState[inputKey] = hasSignal;
         values[`${inputKey}_signal`] = hasSignal ? 'Active' : 'No Signal';
         if (prev !== hasSignal) changedKeys.push(inputKey);
-
-        // User-assigned connector name. The R0226 source list carries the
-        // name the operator set in the H Series UI, keyed by slotId +
-        // interfaceId. Join on those to expose an `input_N_M_name` variable.
-        // Falls back to a generic label if no matching source is found.
-        const src = (this.sourceList ?? []).find(
-          (s) => s?.slotId === slotId && s?.interfaceId === interfaceId,
-        );
-        const niceName = src?.name || src?.inputName || `Input ${slotId + 1}-${interfaceId + 1}`;
-        this.inputSignalNames[inputKey] = niceName;
-        values[`${inputKey}_name`] = niceName;
       }
     }
 
