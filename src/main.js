@@ -124,7 +124,7 @@ class ModuleInstance extends InstanceBase {
     this.enhancedState.screens[screenId][property] = value;
     const prefix = `screen_${screenId + 1}`;
     const varMap = {
-      brightness: { key: `${prefix}_brightness`, val: value, feedbacks: ['brightness_match'] },
+      brightness: { key: `${prefix}_brightness`, val: value, feedbacks: ['brightness_match', 'brightness_bar'] },
       frozen: { key: `${prefix}_frozen`, val: value ? 'On' : 'Off', feedbacks: ['frozen_direct'] },
       ftb: { key: `${prefix}_ftb`, val: value ? 'On' : 'Off', feedbacks: ['ftb_direct'] },
       bkg: { key: `${prefix}_bkg`, val: value ? 'On' : 'Off', feedbacks: ['bkg_direct'] },
