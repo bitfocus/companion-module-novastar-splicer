@@ -1064,6 +1064,51 @@ const getGlobalBlackoutPreset = () => ({
   },
 });
 
+/**
+ * One status-button preset per real input connector. The set of connectors
+ * is derived from `inputSignalState` keys — populated by the optional input
+ * signal polling feature (separate PR #41). Each preset has no press action
+ * (the button is informational) and uses the `input_signal` feedback to
+ * turn green when iSignal=1.
+ *
+ * Gated on the inputSignalPolling toggle so this generator returns {} when
+ * the feature is off, when polling hasn't returned any data yet, or when
+ * the input_signal feedback isn't registered. That keeps this branch
+ * order-independent vs #41: if #41 isn't merged yet, no presets are
+ * generated and nothing breaks.
+ */
+const getInputSignalPresets = (instance) => {
+  if (!instance.config?.inputSignalPolling) return {};
+  const out = {};
+  const keys = Object.keys(instance.inputSignalState ?? {}).sort();
+  for (const inputKey of keys) {
+    const m = inputKey.match(/^input_(\d+)_(\d+)$/);
+    if (!m) continue;
+    const slot = m[1];
+    const conn = m[2];
+    out[`input_signal_${slot}_${conn}`] = {
+      type: 'button',
+      category: 'Input Signal',
+      name: `Input ${slot}-${conn} Signal`,
+      style: {
+        text: `In ${slot}-${conn}\n$(${MODULE_NAME}:${inputKey}_signal)`,
+        size: 'auto',
+        color: WHITE,
+        bgcolor: BLACK,
+      },
+      steps: [{ down: [], up: [] }],
+      feedbacks: [
+        {
+          feedbackId: 'input_signal',
+          options: { inputKey },
+          style: { bgcolor: GREEN, color: BLACK },
+        },
+      ],
+    };
+  }
+  return out;
+};
+
 export const getPresetDefinitions = function (instance) {
   // instance.log('info', JSON.stringify(instance.screenList));
   // instance.log('info', JSON.stringify(instance.sourceList));
@@ -1077,5 +1122,6 @@ export const getPresetDefinitions = function (instance) {
     ...applyScreenPreset(),
     ...getDirectScreenPresets(instance),
     ...getGlobalBlackoutPreset(),
+    ...getInputSignalPresets(instance),
   };
 };
