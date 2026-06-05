@@ -787,20 +787,23 @@ class ModuleInstance extends InstanceBase {
       if (typeof slotId !== 'number') continue;
       const interfaces = Array.isArray(slot.interfaces) ? slot.interfaces : [];
 
-      // DIAGNOSTIC: dump the raw interface objects for input cards so we can
-      // inspect functionType / interfaceType / isUsed per connector across
-      // different card models (e.g. 12G-SDI loop-out). Console channel.
-      console.log(`input-card slot ${slotId}`, JSON.stringify(interfaces));
-
       for (const iface of interfaces) {
         const interfaceId = iface?.interfaceId;
         if (typeof interfaceId !== 'number') continue;
 
-        // Skip connectors that are not a usable input. Per protocol §4.3.5,
-        // functionType=255 means "Invalid" — e.g. the disabled side of a
-        // dual HDMI/DP input card where only one connector can be enabled at
-        // a time. Those should not appear as inputs in Companion.
+        // Skip connectors that are not a usable input.
+        //
+        // 1) functionType=255 means "Invalid" (protocol §4.3.5) — the
+        //    disabled side of a combo HDMI/DP input card where only one
+        //    connector can be enabled at a time. Never a usable input.
         if (iface.functionType === 255) continue;
+
+        // 2) 12G-SDI loop-out. The H_1x12G SDI input card exposes two
+        //    interfaceType=18 connectors, but only connector 0 is an input —
+        //    connector 1 is a hardware LOOP-OUT. The protocol returns both
+        //    with identical fields (no direction flag), so we encode the
+        //    card's known layout: on a 12G-SDI card, keep connector 0 only.
+        if (iface.interfaceType === 18 && interfaceId >= 1) continue;
 
         const inputKey = `input_${slotId + 1}_${interfaceId + 1}`;
         seenKeys.add(inputKey);
