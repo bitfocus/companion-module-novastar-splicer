@@ -107,24 +107,41 @@ class ModuleInstance extends InstanceBase {
       frozen: false,
       ftb: false,
       bkg: false,
+      bkgId: 0,
       osdText: false,
       osdImage: false,
       testPattern: false,
     };
   }
 
-  /** Update enhanced state from R0401 screen details response */
+  /**
+   * Update enhanced state from the R0401 apply_screen_details response.
+   *
+   * The device reports per-screen state in NESTED objects, not flat fields:
+   *   { brightness: 45,
+   *     Freeze: { enable: 0|1 },
+   *     Ftb:    { enable: 0|1 },
+   *     Bkg:    { enable: 0|1, bkgId: N },
+   *     Osd:    { enable: 0|1 },        // screen text OSD
+   *     OsdImage: { enable: 0|1 } }
+   * An earlier version read flat names (bkgEnable, screenFrz, blackout,
+   * textOsdEnable) that don't exist in the payload, so freeze/ftb/bkg/osd
+   * never reconciled from device truth — they only reflected optimistic
+   * action presses. This reads the real nested fields.
+   */
   updateEnhancedFromDetails(screenId, details) {
     if (!this.enhancedState.screens[screenId]) this.initEnhancedScreen(screenId);
     const s = this.enhancedState.screens[screenId];
     const before = { ...s };
     if (details.brightness !== undefined) s.brightness = details.brightness;
-    if (details.screenFrz !== undefined) s.frozen = details.screenFrz === 1;
-    // Protocol: blackout 0 = FTB enabled, 1 = FTB disabled (inverted)
-    if (details.blackout !== undefined) s.ftb = details.blackout === 0;
-    if (details.bkgEnable !== undefined) s.bkg = details.bkgEnable === 1;
-    if (details.textOsdEnable !== undefined) s.osdText = details.textOsdEnable === 1;
-    if (details.imgOsdEnable !== undefined) s.osdImage = details.imgOsdEnable === 1;
+    if (details.Freeze?.enable !== undefined) s.frozen = details.Freeze.enable === 1;
+    if (details.Ftb?.enable !== undefined) s.ftb = details.Ftb.enable === 1;
+    if (details.Bkg?.enable !== undefined) {
+      s.bkg = details.Bkg.enable === 1;
+      if (details.Bkg.bkgId !== undefined) s.bkgId = details.Bkg.bkgId;
+    }
+    if (details.Osd?.enable !== undefined) s.osdText = details.Osd.enable === 1;
+    if (details.OsdImage?.enable !== undefined) s.osdImage = details.OsdImage.enable === 1;
 
     // Redraw any direct feedback whose underlying state changed on this poll.
     // Without this the advanced brightness_bar (and the boolean direct
@@ -175,6 +192,7 @@ class ModuleInstance extends InstanceBase {
         { variableId: `${prefix}_frozen`, name: `${screenName} Frozen` },
         { variableId: `${prefix}_ftb`, name: `${screenName} FTB` },
         { variableId: `${prefix}_bkg`, name: `${screenName} BKG` },
+        { variableId: `${prefix}_bkg_id`, name: `${screenName} BKG ID` },
         { variableId: `${prefix}_osd_text`, name: `${screenName} OSD Text` },
         { variableId: `${prefix}_osd_image`, name: `${screenName} OSD Image` },
         { variableId: `${prefix}_test_pattern`, name: `${screenName} Test Pattern` },
@@ -183,6 +201,7 @@ class ModuleInstance extends InstanceBase {
       values[`${prefix}_frozen`] = state.frozen ? 'On' : 'Off';
       values[`${prefix}_ftb`] = state.ftb ? 'On' : 'Off';
       values[`${prefix}_bkg`] = state.bkg ? 'On' : 'Off';
+      values[`${prefix}_bkg_id`] = state.bkgId ?? 0;
       values[`${prefix}_osd_text`] = state.osdText ? 'On' : 'Off';
       values[`${prefix}_osd_image`] = state.osdImage ? 'On' : 'Off';
       values[`${prefix}_test_pattern`] = state.testPattern ? 'On' : 'Off';
@@ -715,6 +734,12 @@ class ModuleInstance extends InstanceBase {
   UDPResponse(res) {
     // 发出UDP响应事件，供串行请求监听
     this.emit('udp_response', res);
+    // DIAGNOSTIC: log the cmd + ack of the input-list response specifically,
+    // and dump its full payload, so we can see what (if anything) R0226 and
+    // R0200 return on this device. Filtered to input-list cmds to avoid noise.
+    if (res.cmd === 'R0226' || res.cmd === 'R0200') {
+      console.log(`INPUTLIST ${res.cmd} ack=${res.ack} data=${JSON.stringify(res.data)}`);
+    }
     switch (res.cmd) {
       case ACTIONS_CMD.get_screen_list:
         this.dealScreenList(res.data);
@@ -736,11 +761,12 @@ class ModuleInstance extends InstanceBase {
         break;
       case ACTIONS_CMD.get_input_list_simplify:
         this.sourceList = formatSourceList(res.data.inputs);
-        // DIAGNOSTIC: dump first input object so we can confirm it carries a
-        // user-assigned name + slotId/interfaceId to join with connectors.
-        if (res.data?.inputs?.[0]) {
-          console.log('R0226 input[0]', JSON.stringify(res.data.inputs[0]));
-        }
+        // DIAGNOSTIC: dump the full R0226 response keys + first input + the
+        // formatted sourceList so we can see the real field shape and figure
+        // out how to join the user-assigned name to a connector.
+        console.log('R0226 data keys', JSON.stringify(Object.keys(res.data ?? {})));
+        console.log('R0226 raw inputs', JSON.stringify(res.data?.inputs ?? null));
+        console.log('R0226 sourceList[0]', JSON.stringify(this.sourceList?.[0] ?? null));
         break;
       case ACTIONS_CMD.device_heartbeat:
         this.heartbeatManager.receive();
