@@ -1,4 +1,6 @@
 {
+  "$schema": "../node_modules/@companion-module/base/assets/manifest.schema.json",
+  "type": "connection",
   "id": "novastar-splicer",
   "name": "novastar-splicer",
   "shortname": "novastar-splicer",
@@ -14,7 +16,7 @@
     }
   ],
   "runtime": {
-    "type": "node18",
+    "type": "node22",
     "api": "nodejs-ipc",
     "apiVersion": "0.0.0",
     "entrypoint": "../src/main.js"
@@ -22,5 +24,5 @@
   "legacyIds": ["novastar-h-series"],
   "manufacturer": "Novastar",
   "products": ["Splicer"],
-  "keywords": ["Splicer", "Novastar", "H-series", "H2", "H5", "H9", "H15"]
+  "keywords": ["Splicer", "Novastar", "H-series", "H2", "H5", "H9", "H15", "H20"]
 }

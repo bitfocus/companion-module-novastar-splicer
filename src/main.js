@@ -1,7 +1,7 @@
-import { InstanceBase, InstanceStatus, Regex, runEntrypoint, UDPHelper } from '@companion-module/base';
+import { InstanceBase, InstanceStatus, Regex, UDPHelper } from '@companion-module/base';
 
 import { ACTIONS_CMD, PRODUCTS_INFORMATION } from '../utils/constant.js';
-import { upgradeScripts } from './upgrades.js';
+import { UpgradeScripts } from './upgrades.js';
 
 import { EventEmitter } from 'events';
 import { HeartbeatManager } from '../utils/heartbeat.js';
@@ -333,7 +333,8 @@ class ModuleInstance extends InstanceBase {
   updateAll() {
     this.setActionDefinitions(getActions(this));
     this.setFeedbackDefinitions(getFeedbacks(this));
-    this.setPresetDefinitions(getPresetDefinitions(this));
+    const { structure, presets } = getPresetDefinitions(this);
+    this.setPresetDefinitions(structure, presets);
     // 处理变量
     const { screenVariableDefinitions, screenDefaultVariableValues } = formatScreenVariable(this.screenList);
     const { layerVariableDefinitions, layerDefaultVariableValues } = formatLayerVariable(this.screenList);
@@ -917,4 +918,5 @@ class ModuleInstance extends InstanceBase {
   }
 }
 
-runEntrypoint(ModuleInstance, upgradeScripts);
+export default ModuleInstance;
+export { UpgradeScripts };

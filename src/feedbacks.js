@@ -186,15 +186,15 @@ export const getFeedbacks = (instance) => {
     brightness_match: {
       type: 'boolean',
       name: 'Brightness Matches Value (Direct)',
-      description: 'True when the selected screen brightness equals the given value.',
+      description: 'True when the selected screen brightness equals the given value. Brightness field supports variables/expressions (used by the Brightness Level template preset).',
       defaultStyle: { bgcolor: combineRgb(0, 200, 0), color: combineRgb(255, 255, 255) },
       options: [
         { type: 'dropdown', label: 'Screen', id: 'screenId', default: screenListDropDown[0]?.id ?? null, choices: screenListDropDown },
-        { type: 'number', label: 'Value (0-100)', id: 'value', default: 100, min: 0, max: 100 },
+        { type: 'textinput', label: 'Brightness (0-100)', id: 'brightness', default: '100', useVariables: true },
       ],
       callback: (event) => {
         const s = instance.enhancedState?.screens[event.options.screenId];
-        return s ? s.brightness === event.options.value : false;
+        return s ? Number(s.brightness) === Number(event.options.brightness) : false;
       },
     },
     // Graphical brightness bar (Resolume-style progress bar). Draws a
