@@ -1,6 +1,10 @@
 import { combineRgb } from '@companion-module/base';
 import { MODULE_NAME, PGM_PVW_TYPE, TEST_PATTERN_TYPE } from '../utils/constant.js';
 
+// Fixed brightness levels (5% steps, 100→0). Shared between the per-level
+// preset builder and the structure builder so the two never drift.
+const BRIGHTNESS_LEVELS = [100, 95, 90, 85, 80, 75, 70, 65, 60, 55, 50, 45, 40, 35, 30, 25, 20, 15, 10, 5, 0];
+
 // ============================================================================
 // Screen-first preset layout with template groups
 // ============================================================================
@@ -48,9 +52,9 @@ const buildAllPresets = (instance) => {
       const combineId = `${screenId}_${presetId}`;
       presets[`preset_recall_${screenId}_${presetId}`] = {
         type: 'simple',
-        name: `Recall: ${label}`,
+        name: label,
         style: {
-          text: label,
+          text: `$(${MODULE_NAME}:screenId_${screenId})\n$(${MODULE_NAME}:screenId_${screenId}_presetId_${presetId})`,
           size: 'auto',
           color: combineRgb(255, 255, 255),
           bgcolor: combineRgb(0, 0, 0),
@@ -80,9 +84,9 @@ const buildAllPresets = (instance) => {
       const combineId = `${screenId}_${layerId}`;
       presets[`layer_select_${screenId}_${layerId}`] = {
         type: 'simple',
-        name: `Layer: ${label}`,
+        name: label,
         style: {
-          text: label,
+          text: `$(${MODULE_NAME}:screenId_${screenId})\n$(${MODULE_NAME}:screenId_${screenId}_layerId_${layerId})`,
           size: 'auto',
           color: combineRgb(255, 255, 255),
           bgcolor: combineRgb(0, 0, 0),
@@ -102,51 +106,40 @@ const buildAllPresets = (instance) => {
     });
   });
 
-  // ---- Template: Brightness Level (one template per screen) ----
+  // ---- Brightness fixed levels (one preset per level, literal % baked in) ----
+  // A template would preview the local-variable startup value (100%) for every
+  // entry in the preset library; individual presets show each level's real %
+  // in the library and on the button. Matches the parent / pre-template module.
   instance.screenList?.forEach((screen) => {
-    const { screenId } = screen;
-    presets[`tpl_brightness_${screenId}`] = {
-      type: 'simple',
-      name: 'Brightness Level',
-      localVariables: [
-        { variableName: 'brightnessLevel', variableType: 'simple', startupValue: 100 },
-      ],
-      style: {
-        text: `$(${MODULE_NAME}:screenId_${screenId})\n$(local:brightnessLevel)%`,
-        size: 'auto',
-        color: combineRgb(255, 255, 255),
-        bgcolor: combineRgb(0, 0, 0),
-      },
-      feedbacks: [
-        {
-          feedbackId: 'brightness_match',
-          options: {
-            screenId,
-            brightness: { value: '$(local:brightnessLevel)', isExpression: true },
+    const { name, screenId } = screen;
+    BRIGHTNESS_LEVELS.forEach((pct) => {
+      presets[`set_bright_${screenId}_${pct}`] = {
+        type: 'simple',
+        name: `${name} Brightness ${pct}%`,
+        style: {
+          text: `$(${MODULE_NAME}:screenId_${screenId})\n${pct}%`,
+          size: 'auto',
+          color: combineRgb(255, 255, 255),
+          bgcolor: combineRgb(0, 0, 0),
+        },
+        feedbacks: [
+          {
+            feedbackId: 'brightness_match',
+            options: { screenId, brightness: String(pct) },
+            style: { bgcolor: combineRgb(0, 255, 0), color: combineRgb(0, 0, 0) },
           },
-          style: { bgcolor: combineRgb(0, 255, 0), color: combineRgb(0, 0, 0) },
-        },
-      ],
-      steps: [
-        {
-          down: [
-            {
-              actionId: 'set_brightness',
-              options: {
-                screenId,
-                brightness: { value: '$(local:brightnessLevel)', isExpression: true },
-              },
-            },
-            {
-              actionId: 'save_brightness',
-              options: { screenId },
-              delay: 100,
-            },
-          ],
-          up: [],
-        },
-      ],
-    };
+        ],
+        steps: [
+          {
+            down: [
+              { actionId: 'set_brightness', options: { screenId, brightness: String(pct) } },
+              { actionId: 'save_brightness', options: { screenId }, delay: 100 },
+            ],
+            up: [],
+          },
+        ],
+      };
+    });
   });
 
   // ---- Per-screen Brightness +/- (stays simple, not templatable) ----
@@ -609,16 +602,13 @@ const buildStructure = (instance) => {
       });
     }
 
-    // Brightness (template for levels + simple for +/-)
-    const brightnessLevels = [100, 95, 90, 85, 80, 75, 70, 65, 60, 55, 50, 45, 40, 35, 30, 25, 20, 15, 10, 5, 0];
+    // Brightness levels (one simple preset per level — each shows its own %)
     groups.push({
       id: `screen_${screenId}_brightness_levels`,
-      type: 'template',
+      type: 'simple',
       name: 'Brightness Levels',
       keywords: ['brightness', 'dim', 'level', 'percent'],
-      presetId: `tpl_brightness_${screenId}`,
-      templateVariableName: 'brightnessLevel',
-      templateValues: brightnessLevels.map((pct) => ({ name: `${pct}%`, value: pct })),
+      presets: BRIGHTNESS_LEVELS.map((pct) => `set_bright_${screenId}_${pct}`),
     });
 
     groups.push({
