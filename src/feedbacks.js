@@ -212,7 +212,7 @@ export const getFeedbacks = (instance) => {
           type: 'number',
           label: 'Bar thickness (px)',
           id: 'barWidth',
-          default: 18,
+          default: 8,
           min: 4,
           max: 48,
           tooltip: 'How tall the bar is. Larger = chunkier / more obvious.',
@@ -224,7 +224,7 @@ export const getFeedbacks = (instance) => {
         const barColor = Number(feedback.options.barColor);
         const width = feedback.image?.width ?? 72;
         const height = feedback.image?.height ?? 72;
-        const barWidth = Math.max(4, Math.min(48, Number(feedback.options.barWidth) || 18));
+        const barWidth = Math.max(4, Math.min(48, Number(feedback.options.barWidth) || 8));
         const options = {
           width,
           height,

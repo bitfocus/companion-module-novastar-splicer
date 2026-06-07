@@ -35,102 +35,71 @@ const buildAllPresets = (instance) => {
     };
   });
 
-  // ---- Template: Preset Recall (one template per screen) ----
-  // Only create when the screen actually has presets — the structure only
-  // references this template group under the same condition, so creating it
-  // unconditionally produces "preset not referenced by structure" warnings
-  // during the window before preset lists have loaded.
+  // ---- Preset Recall (one preset per scene, real scene name baked in) ----
+  // A Companion template can only substitute a numeric value into the button
+  // text, never the per-value name, so a template would show "Preset 2" rather
+  // than the scene name. Generate one simple preset per scene instead (matching
+  // the millumin per-item pattern) so the real name is shown.
   instance.screenList?.forEach((screen) => {
     const { screenId } = screen;
-    if (!(screen.presets?.length > 0)) return;
-    presets[`tpl_preset_recall_${screenId}`] = {
-      type: 'simple',
-      name: 'Preset Recall',
-      localVariables: [
-        { variableName: 'presetIndex', variableType: 'simple', startupValue: 1 },
-      ],
-      style: {
-        text: `$(${MODULE_NAME}:screenId_${screenId})\nPreset $(local:presetIndex)`,
-        size: 'auto',
-        color: combineRgb(255, 255, 255),
-        bgcolor: combineRgb(0, 0, 0),
-      },
-      feedbacks: [
-        {
-          feedbackId: 'preset_loaded',
-          options: {
-            combineId: { value: `concat('${screenId}_', $(local:presetIndex) - 1)`, isExpression: true },
+    (screen.presets || []).forEach((p) => {
+      const presetId = p.presetId;
+      const label = p.name || `Preset ${presetId + 1}`;
+      const combineId = `${screenId}_${presetId}`;
+      presets[`preset_recall_${screenId}_${presetId}`] = {
+        type: 'simple',
+        name: `Recall: ${label}`,
+        style: {
+          text: label,
+          size: 'auto',
+          color: combineRgb(255, 255, 255),
+          bgcolor: combineRgb(0, 0, 0),
+        },
+        feedbacks: [
+          {
+            feedbackId: 'preset_loaded',
+            options: { combineId },
+            style: { bgcolor: combineRgb(0, 255, 0), color: combineRgb(0, 0, 0) },
           },
-          style: { bgcolor: combineRgb(0, 255, 0), color: combineRgb(0, 0, 0) },
-        },
-      ],
-      steps: [
-        {
-          down: [{
-            actionId: 'load_preset',
-            options: {
-              combineId: { value: `concat('${screenId}_', $(local:presetIndex) - 1)`, isExpression: true },
-              screenId,
-            },
-          }],
-          up: [],
-        },
-      ],
-    };
+        ],
+        steps: [
+          { down: [{ actionId: 'load_preset', options: { combineId, screenId } }], up: [] },
+        ],
+      };
+    });
   });
 
-  // ---- Template: Layer Selection (one template per screen) ----
-  // Only create when the screen actually has layers (matches the structure
-  // guard) to avoid unreferenced-preset warnings before layers have loaded.
+  // ---- Layer Selection (one preset per layer, real layer name baked in) ----
+  // Same reasoning as Preset Recall: a template can't render the per-layer
+  // name, so generate one simple preset per layer with the real name.
   instance.screenList?.forEach((screen) => {
     const { screenId } = screen;
-    if (!(screen.layers?.length > 0)) return;
-    presets[`tpl_layer_select_${screenId}`] = {
-      type: 'simple',
-      name: 'Layer Select',
-      localVariables: [
-        { variableName: 'layerIndex', variableType: 'simple', startupValue: 1 },
-      ],
-      style: {
-        text: `$(${MODULE_NAME}:screenId_${screenId})\nLayer $(local:layerIndex)`,
-        size: 'auto',
-        color: combineRgb(255, 255, 255),
-        bgcolor: combineRgb(0, 0, 0),
-      },
-      feedbacks: [
-        {
-          feedbackId: 'layer_selected',
-          options: {
-            combineId: { value: `concat('${screenId}_', $(local:layerIndex) - 1)`, isExpression: true },
+    (screen.layers || []).forEach((l) => {
+      const layerId = l.layerId;
+      const label = l.name || `Layer ${layerId + 1}`;
+      const combineId = `${screenId}_${layerId}`;
+      presets[`layer_select_${screenId}_${layerId}`] = {
+        type: 'simple',
+        name: `Layer: ${label}`,
+        style: {
+          text: label,
+          size: 'auto',
+          color: combineRgb(255, 255, 255),
+          bgcolor: combineRgb(0, 0, 0),
+        },
+        feedbacks: [
+          {
+            feedbackId: 'layer_selected',
+            options: { combineId },
+            style: { bgcolor: combineRgb(0, 255, 0), color: combineRgb(0, 0, 0) },
           },
-          style: { bgcolor: combineRgb(0, 255, 0), color: combineRgb(0, 0, 0) },
-        },
-      ],
-      steps: [
-        {
-          down: [{
-            actionId: 'select_layer',
-            options: {
-              combineId: { value: `concat('${screenId}_', $(local:layerIndex) - 1)`, isExpression: true },
-              screenId,
-              enable: 1,
-            },
-          }],
-          up: [],
-        },
-        {
-          down: [{
-            actionId: 'select_layer',
-            options: {
-              combineId: { value: `concat('${screenId}_', $(local:layerIndex) - 1)`, isExpression: true },
-              screenId,
-              enable: 0,
-            },
-          }],
-          up: [],
-        },
-      ],
-    };
+        ],
+        steps: [
+          { down: [{ actionId: 'select_layer', options: { combineId, screenId, enable: 1 } }], up: [] },
+          { down: [{ actionId: 'select_layer', options: { combineId, screenId, enable: 0 } }], up: [] },
+        ],
+      };
+    });
   });
 
   // ---- Template: Brightness Level (one template per screen) ----
@@ -219,7 +188,7 @@ const buildAllPresets = (instance) => {
       feedbacks: [
         {
           feedbackId: 'brightness_bar',
-          options: { screenId, barColor: combineRgb(0, 200, 0), barWidth: 18 },
+          options: { screenId, barColor: combineRgb(0, 200, 0), barWidth: 8 },
         },
       ],
     };
@@ -616,37 +585,27 @@ const buildStructure = (instance) => {
       presets: [`screen_${screenId}`],
     });
 
-    // Preset Recall (template - one preset generates N buttons)
+    // Preset Recall (one simple preset per scene — real names baked in)
     const screenPresets = screen.presets || [];
     if (screenPresets.length > 0) {
       groups.push({
         id: `screen_${screenId}_presets`,
-        type: 'template',
+        type: 'simple',
         name: 'Preset Recall',
         keywords: ['preset', 'recall', 'scene', 'load'],
-        presetId: `tpl_preset_recall_${screenId}`,
-        templateVariableName: 'presetIndex',
-        templateValues: screenPresets.map((p) => ({
-          name: p.name || `Preset ${p.presetId + 1}`,
-          value: p.presetId + 1,
-        })),
+        presets: screenPresets.map((p) => `preset_recall_${screenId}_${p.presetId}`),
       });
     }
 
-    // Layers (template - one preset generates N buttons)
+    // Layers (one simple preset per layer — real names baked in)
     const screenLayers = screen.layers || [];
     if (screenLayers.length > 0) {
       groups.push({
         id: `screen_${screenId}_layers`,
-        type: 'template',
+        type: 'simple',
         name: 'Layers',
         keywords: ['layer', 'select'],
-        presetId: `tpl_layer_select_${screenId}`,
-        templateVariableName: 'layerIndex',
-        templateValues: screenLayers.map((l) => ({
-          name: l.name || `Layer ${l.layerId + 1}`,
-          value: l.layerId + 1,
-        })),
+        presets: screenLayers.map((l) => `layer_select_${screenId}_${l.layerId}`),
       });
     }
 
