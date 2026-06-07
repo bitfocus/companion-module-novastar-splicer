@@ -132,7 +132,6 @@ export const getActions = (instance) => {
           label: 'Command',
           id: 'command',
           default: DEFAULT_COMMAND,
-          required: true,
         },
       ],
       callback: (event) => {
@@ -449,7 +448,9 @@ export const getActions = (instance) => {
       ],
       callback: async (event) => {
         const screenId = event.options.screenId;
-        const raw = await instance.parseVariablesInString(String(event.options.brightness));
+        // base 2.0 resolves useVariables/expression options before the
+        // callback, so event.options.brightness is already the final value.
+        const raw = String(event.options.brightness);
         const brightness = Math.max(0, Math.min(100, Math.round(Number(raw))));
         if (isNaN(brightness)) {
           instance.log('warn', `set_brightness: invalid value "${raw}"`);

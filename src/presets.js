@@ -36,8 +36,13 @@ const buildAllPresets = (instance) => {
   });
 
   // ---- Template: Preset Recall (one template per screen) ----
+  // Only create when the screen actually has presets — the structure only
+  // references this template group under the same condition, so creating it
+  // unconditionally produces "preset not referenced by structure" warnings
+  // during the window before preset lists have loaded.
   instance.screenList?.forEach((screen) => {
     const { screenId } = screen;
+    if (!(screen.presets?.length > 0)) return;
     presets[`tpl_preset_recall_${screenId}`] = {
       type: 'simple',
       name: 'Preset Recall',
@@ -75,8 +80,11 @@ const buildAllPresets = (instance) => {
   });
 
   // ---- Template: Layer Selection (one template per screen) ----
+  // Only create when the screen actually has layers (matches the structure
+  // guard) to avoid unreferenced-preset warnings before layers have loaded.
   instance.screenList?.forEach((screen) => {
     const { screenId } = screen;
+    if (!(screen.layers?.length > 0)) return;
     presets[`tpl_layer_select_${screenId}`] = {
       type: 'simple',
       name: 'Layer Select',

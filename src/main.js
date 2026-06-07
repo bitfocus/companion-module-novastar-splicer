@@ -356,7 +356,11 @@ class ModuleInstance extends InstanceBase {
       }
     }
 
-    this.setVariableDefinitions([
+    // base 2.0 requires variable definitions as an OBJECT keyed by
+    // variableId ({ [id]: { name } }), not an array. The format helpers
+    // still return arrays of { variableId, name }, so flatten them into the
+    // object form here at the single call site.
+    const allVariableDefs = [
       ...screenVariableDefinitions,
       ...layerVariableDefinitions,
       ...presetVariableDefinitions,
@@ -364,7 +368,12 @@ class ModuleInstance extends InstanceBase {
       ...sourceVariableDefinitions,
       ...enhancedDefs,
       ...inputSignalDefs,
-    ]);
+    ];
+    const variableDefsObject = {};
+    for (const def of allVariableDefs) {
+      if (def && def.variableId) variableDefsObject[def.variableId] = { name: def.name };
+    }
+    this.setVariableDefinitions(variableDefsObject);
     this.setVariableValues({
       ...screenDefaultVariableValues,
       ...layerDefaultVariableValues,
