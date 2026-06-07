@@ -16,7 +16,7 @@ const buildAllPresets = (instance) => {
       type: 'simple',
       name,
       style: {
-        text: `Select\\n$(${MODULE_NAME}:screen_${screenId + 1})`,
+        text: `Select\\n$(${MODULE_NAME}:screenId_${screenId})`,
         size: '18',
         color: combineRgb(255, 255, 255),
         bgcolor: combineRgb(0, 0, 0),
@@ -50,7 +50,7 @@ const buildAllPresets = (instance) => {
         { variableName: 'presetIndex', variableType: 'simple', startupValue: 1 },
       ],
       style: {
-        text: `$(${MODULE_NAME}:screen_${screenId + 1})\nPreset $(local:presetIndex)`,
+        text: `$(${MODULE_NAME}:screenId_${screenId})\nPreset $(local:presetIndex)`,
         size: 'auto',
         color: combineRgb(255, 255, 255),
         bgcolor: combineRgb(0, 0, 0),
@@ -92,7 +92,7 @@ const buildAllPresets = (instance) => {
         { variableName: 'layerIndex', variableType: 'simple', startupValue: 1 },
       ],
       style: {
-        text: `$(${MODULE_NAME}:screen_${screenId + 1})\nLayer $(local:layerIndex)`,
+        text: `$(${MODULE_NAME}:screenId_${screenId})\nLayer $(local:layerIndex)`,
         size: 'auto',
         color: combineRgb(255, 255, 255),
         bgcolor: combineRgb(0, 0, 0),
@@ -143,7 +143,7 @@ const buildAllPresets = (instance) => {
         { variableName: 'brightnessLevel', variableType: 'simple', startupValue: 100 },
       ],
       style: {
-        text: `$(${MODULE_NAME}:screen_${screenId + 1})\n$(local:brightnessLevel)%`,
+        text: `$(${MODULE_NAME}:screenId_${screenId})\n$(local:brightnessLevel)%`,
         size: 'auto',
         color: combineRgb(255, 255, 255),
         bgcolor: combineRgb(0, 0, 0),
@@ -210,7 +210,7 @@ const buildAllPresets = (instance) => {
       type: 'simple',
       name: `${name} Brightness Bar`,
       style: {
-        text: `$(${MODULE_NAME}:screen_${screenId + 1})\n$(${MODULE_NAME}:screen_${screenId + 1}_brightness)%`,
+        text: `$(${MODULE_NAME}:screenId_${screenId})\n$(${MODULE_NAME}:screen_${screenId + 1}_brightness)%`,
         size: 'auto',
         color: combineRgb(255, 255, 255),
         bgcolor: combineRgb(0, 0, 0),
@@ -231,7 +231,7 @@ const buildAllPresets = (instance) => {
       type: 'simple',
       name,
       style: {
-        text: `$(${MODULE_NAME}:presetCollectionId_${presetCollectionId + 1})`,
+        text: `$(${MODULE_NAME}:presetCollectionId_${presetCollectionId})`,
         size: 'auto',
         color: combineRgb(255, 255, 255),
         bgcolor: combineRgb(0, 0, 0),
@@ -255,7 +255,7 @@ const buildAllPresets = (instance) => {
       type: 'simple',
       name,
       style: {
-        text: `$(${MODULE_NAME}:source_${inputId + 1}_${cropId})`,
+        text: `$(${MODULE_NAME}:source_${inputId}_${cropId})`,
         size: '12',
         color: combineRgb(255, 255, 255),
         bgcolor: combineRgb(0, 0, 0),
