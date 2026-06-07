@@ -149,7 +149,7 @@ const buildAllPresets = (instance) => {
     presets[`direct_bright_up_${screenId}`] = {
       type: 'simple',
       name: `${name} Brightness +`,
-      style: { text: `${name}\nBright +`, size: 'auto', color: combineRgb(255, 255, 255), bgcolor: combineRgb(0, 0, 0) },
+      style: { text: `$(${MODULE_NAME}:screenId_${screenId})\nBright +`, size: 'auto', color: combineRgb(255, 255, 255), bgcolor: combineRgb(0, 0, 0) },
       steps: [
         { down: [{ actionId: 'brightness_add_direct', options: { screenId } }], up: [] },
       ],
@@ -159,7 +159,7 @@ const buildAllPresets = (instance) => {
     presets[`direct_bright_down_${screenId}`] = {
       type: 'simple',
       name: `${name} Brightness -`,
-      style: { text: `${name}\nBright -`, size: 'auto', color: combineRgb(255, 255, 255), bgcolor: combineRgb(0, 0, 0) },
+      style: { text: `$(${MODULE_NAME}:screenId_${screenId})\nBright -`, size: 'auto', color: combineRgb(255, 255, 255), bgcolor: combineRgb(0, 0, 0) },
       steps: [
         { down: [{ actionId: 'brightness_minus_direct', options: { screenId } }], up: [] },
       ],
@@ -418,21 +418,21 @@ const buildAllPresets = (instance) => {
     presets[`direct_pgm_pvw_${screenId}`] = {
       type: 'simple',
       name: `${name} PGM/PVW`,
-      style: { text: `${name}\nPGM/PVW`, size: '14', color: combineRgb(255, 255, 255), bgcolor: combineRgb(0, 0, 0) },
+      style: { text: `$(${MODULE_NAME}:screenId_${screenId})\nPGM/PVW`, size: '14', color: combineRgb(255, 255, 255), bgcolor: combineRgb(0, 0, 0) },
       steps: [
         { down: [{ actionId: 'select_screen', options: { screenId, enable: 1 } }, { actionId: 'pgm_pvw_switch', options: { enNonTime: 0 } }], up: [] },
         { down: [{ actionId: 'select_screen', options: { screenId, enable: 1 } }, { actionId: 'pgm_pvw_switch', options: { enNonTime: 1 } }], up: [] },
       ],
       feedbacks: [
-        { feedbackId: 'pgm_pvw_switch', options: { type: PGM_PVW_TYPE.PGM }, style: { bgcolor: combineRgb(0, 255, 0), color: combineRgb(0, 0, 0), text: `${name}\nPGM` } },
-        { feedbackId: 'pgm_pvw_switch', options: { type: PGM_PVW_TYPE.PVW }, style: { bgcolor: combineRgb(255, 0, 0), color: combineRgb(0, 0, 0), text: `${name}\nPVW` } },
+        { feedbackId: 'pgm_pvw_switch', options: { type: PGM_PVW_TYPE.PGM }, style: { bgcolor: combineRgb(0, 255, 0), color: combineRgb(0, 0, 0), text: `$(${MODULE_NAME}:screenId_${screenId})\nPGM` } },
+        { feedbackId: 'pgm_pvw_switch', options: { type: PGM_PVW_TYPE.PVW }, style: { bgcolor: combineRgb(255, 0, 0), color: combineRgb(0, 0, 0), text: `$(${MODULE_NAME}:screenId_${screenId})\nPVW` } },
       ],
     };
 
     presets[`direct_take_${screenId}`] = {
       type: 'simple',
       name: `${name} Take`,
-      style: { text: `${name}\nTake`, size: 'auto', color: combineRgb(255, 255, 255), bgcolor: combineRgb(0, 0, 0) },
+      style: { text: `$(${MODULE_NAME}:screenId_${screenId})\nTake`, size: 'auto', color: combineRgb(255, 255, 255), bgcolor: combineRgb(0, 0, 0) },
       steps: [
         { down: [{ actionId: 'select_screen', options: { screenId, enable: 1 } }, { actionId: 'take_switch', options: { manualPlay: 1 } }], up: [] },
         { down: [{ actionId: 'select_screen', options: { screenId, enable: 1 } }, { actionId: 'take_switch', options: { manualPlay: 0 } }], up: [] },
@@ -445,7 +445,7 @@ const buildAllPresets = (instance) => {
     presets[`direct_ftb_${screenId}`] = {
       type: 'simple',
       name: `${name} FTB`,
-      style: { text: `${name}\nFTB`, size: 'auto', color: combineRgb(255, 255, 255), bgcolor: combineRgb(0, 0, 0) },
+      style: { text: `$(${MODULE_NAME}:screenId_${screenId})\nFTB`, size: 'auto', color: combineRgb(255, 255, 255), bgcolor: combineRgb(0, 0, 0) },
       steps: [
         { down: [{ actionId: 'ftb_direct', options: { screenId, state: 1 } }], up: [] },
         { down: [{ actionId: 'ftb_direct', options: { screenId, state: 0 } }], up: [] },
@@ -458,7 +458,7 @@ const buildAllPresets = (instance) => {
     presets[`direct_freeze_${screenId}`] = {
       type: 'simple',
       name: `${name} Freeze`,
-      style: { text: `${name}\nFreeze`, size: 'auto', color: combineRgb(255, 255, 255), bgcolor: combineRgb(0, 0, 0) },
+      style: { text: `$(${MODULE_NAME}:screenId_${screenId})\nFreeze`, size: 'auto', color: combineRgb(255, 255, 255), bgcolor: combineRgb(0, 0, 0) },
       steps: [
         { down: [{ actionId: 'freeze_direct', options: { screenId, state: 1 } }], up: [] },
         { down: [{ actionId: 'freeze_direct', options: { screenId, state: 0 } }], up: [] },
@@ -471,7 +471,7 @@ const buildAllPresets = (instance) => {
     presets[`direct_bkg_${screenId}`] = {
       type: 'simple',
       name: `${name} BKG`,
-      style: { text: `${name}\nBKG`, size: 'auto', color: combineRgb(255, 255, 255), bgcolor: combineRgb(0, 0, 0) },
+      style: { text: `$(${MODULE_NAME}:screenId_${screenId})\nBKG`, size: 'auto', color: combineRgb(255, 255, 255), bgcolor: combineRgb(0, 0, 0) },
       steps: [
         { down: [{ actionId: 'bkg_direct', options: { screenId, state: 1 } }], up: [] },
         { down: [{ actionId: 'bkg_direct', options: { screenId, state: 0 } }], up: [] },
@@ -484,7 +484,7 @@ const buildAllPresets = (instance) => {
     presets[`direct_osd_text_${screenId}`] = {
       type: 'simple',
       name: `${name} OSD Text`,
-      style: { text: `${name}\nOSD Text`, size: 'auto', color: combineRgb(255, 255, 255), bgcolor: combineRgb(0, 0, 0) },
+      style: { text: `$(${MODULE_NAME}:screenId_${screenId})\nOSD Text`, size: 'auto', color: combineRgb(255, 255, 255), bgcolor: combineRgb(0, 0, 0) },
       steps: [
         { down: [{ actionId: 'osd_direct', options: { screenId, state: 1 } }], up: [] },
         { down: [{ actionId: 'osd_direct', options: { screenId, state: 0 } }], up: [] },
@@ -497,7 +497,7 @@ const buildAllPresets = (instance) => {
     presets[`direct_osd_image_${screenId}`] = {
       type: 'simple',
       name: `${name} OSD Image`,
-      style: { text: `${name}\nOSD Img`, size: 'auto', color: combineRgb(255, 255, 255), bgcolor: combineRgb(0, 0, 0) },
+      style: { text: `$(${MODULE_NAME}:screenId_${screenId})\nOSD Img`, size: 'auto', color: combineRgb(255, 255, 255), bgcolor: combineRgb(0, 0, 0) },
       steps: [
         { down: [{ actionId: 'osd_direct', options: { screenId, state: 1 } }], up: [] },
         { down: [{ actionId: 'osd_direct', options: { screenId, state: 0 } }], up: [] },
@@ -510,7 +510,7 @@ const buildAllPresets = (instance) => {
     presets[`direct_test_${screenId}`] = {
       type: 'simple',
       name: `${name} Test Pattern`,
-      style: { text: `${name}\nTest`, size: 'auto', color: combineRgb(255, 255, 255), bgcolor: combineRgb(0, 0, 0) },
+      style: { text: `$(${MODULE_NAME}:screenId_${screenId})\nTest`, size: 'auto', color: combineRgb(255, 255, 255), bgcolor: combineRgb(0, 0, 0) },
       steps: [
         { down: [{ actionId: 'select_screen', options: { screenId, enable: 1 } }, { actionId: 'test_pattern_switch', options: { testPattern: TEST_PATTERN_TYPE.OPEN } }], up: [] },
         { down: [{ actionId: 'select_screen', options: { screenId, enable: 1 } }, { actionId: 'test_pattern_switch', options: { testPattern: TEST_PATTERN_TYPE.CLOSE } }], up: [] },
