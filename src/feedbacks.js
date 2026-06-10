@@ -1,4 +1,5 @@
 import { combineRgb } from '@companion-module/base';
+import { graphics } from 'companion-module-utils';
 import { PGM_PVW_TYPE } from '../utils/constant.js';
 import formatDropDownData from '../utils/formatDropDown.js';
 
@@ -185,15 +186,59 @@ export const getFeedbacks = (instance) => {
     brightness_match: {
       type: 'boolean',
       name: 'Brightness Matches Value (Direct)',
-      description: 'True when the selected screen brightness equals the given value.',
+      description: 'True when the selected screen brightness equals the given value. Brightness field supports variables/expressions (used by the Brightness Level template preset).',
       defaultStyle: { bgcolor: combineRgb(0, 200, 0), color: combineRgb(255, 255, 255) },
       options: [
         { type: 'dropdown', label: 'Screen', id: 'screenId', default: screenListDropDown[0]?.id ?? null, choices: screenListDropDown },
-        { type: 'number', label: 'Value (0-100)', id: 'value', default: 100, min: 0, max: 100 },
+        { type: 'textinput', label: 'Brightness (0-100)', id: 'brightness', default: '100', useVariables: true },
       ],
       callback: (event) => {
         const s = instance.enhancedState?.screens[event.options.screenId];
-        return s ? s.brightness === event.options.value : false;
+        return s ? Number(s.brightness) === Number(event.options.brightness) : false;
+      },
+    },
+    // Graphical brightness bar (Resolume-style progress bar). Draws a
+    // horizontal bar across the bottom of the button reflecting the chosen
+    // screen's 0-100 brightness. Pair with a button whose text shows the
+    // screen name + the screen_N_brightness variable for a clean readout.
+    brightness_bar: {
+      type: 'advanced',
+      name: 'Brightness Bar (Direct)',
+      description: 'Horizontal progress bar showing a screen brightness (0-100). Pair with the brightness variable in the button text.',
+      options: [
+        { type: 'dropdown', label: 'Screen', id: 'screenId', default: screenListDropDown[0]?.id ?? null, choices: screenListDropDown },
+        { type: 'colorpicker', label: 'Bar color', id: 'barColor', default: combineRgb(0, 200, 0), returnType: 'number' },
+        {
+          type: 'number',
+          label: 'Bar thickness (px)',
+          id: 'barWidth',
+          default: 8,
+          min: 4,
+          max: 48,
+          tooltip: 'How tall the bar is. Larger = chunkier / more obvious.',
+        },
+      ],
+      callback: (feedback) => {
+        const s = instance.enhancedState?.screens[feedback.options.screenId];
+        const value = s && typeof s.brightness === 'number' ? Math.max(0, Math.min(100, s.brightness)) : 0;
+        const barColor = Number(feedback.options.barColor);
+        const width = feedback.image?.width ?? 72;
+        const height = feedback.image?.height ?? 72;
+        const barWidth = Math.max(4, Math.min(48, Number(feedback.options.barWidth) || 8));
+        const options = {
+          width,
+          height,
+          colors: [{ size: 100, color: barColor, background: barColor, backgroundOpacity: 64 }],
+          barLength: width - 8,
+          barWidth,
+          value,
+          type: 'horizontal',
+          offsetX: 4,
+          // Sit the (thicker) bar near the bottom of the button.
+          offsetY: Math.max(0, height - barWidth - 4),
+          opacity: 255,
+        };
+        return { imageBuffer: Buffer.from(graphics.bar(options)).toString('base64') };
       },
     },
     frozen_direct: {
@@ -280,5 +325,49 @@ export const getFeedbacks = (instance) => {
         );
       },
     },
+    // Input signal feedback. Only registers when input signal polling is on
+    // in config, otherwise the feedback is unavailable in the UI (matches
+    // the variable-emission gate in main.js).
+    ...(instance.config?.inputSignalPolling
+      ? {
+          input_signal: {
+            type: 'boolean',
+            name: 'Input Signal Active',
+            description: 'True when the selected input connector has an active signal (R0102 iSignal=1).',
+            defaultStyle: {
+              bgcolor: combineRgb(0, 200, 0),
+              color: combineRgb(255, 255, 255),
+            },
+            options: [
+              {
+                type: 'dropdown',
+                label: 'Input',
+                id: 'inputKey',
+                // Choices derived from inputSignalState — only real
+                // slot/connector pairs that have actually returned R0102
+                // data appear in the dropdown. Updated on every poll tick,
+                // so the menu populates within ~1 second of enabling
+                // polling on a live device.
+                default: (() => {
+                  const keys = Object.keys(instance.inputSignalState ?? {}).sort();
+                  return keys[0] ?? 'input_1_1';
+                })(),
+                choices: (() => {
+                  const keys = Object.keys(instance.inputSignalState ?? {}).sort();
+                  if (keys.length === 0) {
+                    return [{ id: 'input_1_1', label: '(waiting for device data...)' }];
+                  }
+                  return keys.map((inputKey) => {
+                    const m = inputKey.match(/^input_(\d+)_(\d+)$/);
+                    const label = m ? `Input slot ${m[1]} conn ${m[2]}` : inputKey;
+                    return { id: inputKey, label };
+                  });
+                })(),
+              },
+            ],
+            callback: (event) => instance.inputSignalState[event.options.inputKey] === true,
+          },
+        }
+      : {}),
   };
 };

@@ -132,7 +132,6 @@ export const getActions = (instance) => {
           label: 'Command',
           id: 'command',
           default: DEFAULT_COMMAND,
-          required: true,
         },
       ],
       callback: (event) => {
@@ -449,7 +448,9 @@ export const getActions = (instance) => {
       ],
       callback: async (event) => {
         const screenId = event.options.screenId;
-        const raw = await instance.parseVariablesInString(String(event.options.brightness));
+        // base 2.0 resolves useVariables/expression options before the
+        // callback, so event.options.brightness is already the final value.
+        const raw = String(event.options.brightness);
         const brightness = Math.max(0, Math.min(100, Math.round(Number(raw))));
         if (isNaN(brightness)) {
           instance.log('warn', `set_brightness: invalid value "${raw}"`);
@@ -495,17 +496,29 @@ export const getActions = (instance) => {
     },
     bkg_direct: {
       name: 'BKG (Direct)',
-      description: 'Enable or disable BKG on a specific screen.',
+      description: 'Enable or disable BKG on a specific screen, choosing which BKG preset (by ID) to apply when enabling.',
       options: [
         { type: 'dropdown', label: 'Screen', id: 'screenId', default: screenListDropDown[0]?.id ?? null, choices: screenListDropDown },
         { type: 'dropdown', label: 'State', id: 'state', default: 1, choices: [{ id: 1, label: 'Enable' }, { id: 0, label: 'Disable' }] },
+        {
+          type: 'number',
+          label: 'BKG (when enabling)',
+          id: 'bkgId',
+          default: 1,
+          min: 1,
+          max: 256,
+          tooltip: 'Which stored background to show (1-based, matches the screen_N_bkg_id variable). Ignored when disabling.',
+        },
       ],
       callback: async (event) => {
         const screenId = event.options.screenId;
         const enable = parseInt(event.options.state);
+        // UI is 1-based; the device bkgId is 0-based.
+        const deviceBkgId = Math.max(0, Math.min(255, (Number(event.options.bkgId) || 1) - 1));
         instance.updateEnhancedFromAction(screenId, 'bkg', enable === 1);
+        if (enable === 1) instance.updateEnhancedFromAction(screenId, 'bkgId', deviceBkgId);
         // safeSend guards on missing udp internally
-        instance.safeSend(handleParams(ACTIONS_CMD.bkg_switch, { screenId, enable, bkgId: 0 }));
+        instance.safeSend(handleParams(ACTIONS_CMD.bkg_switch, { screenId, enable, bkgId: deviceBkgId }));
       },
     },
     osd_direct: {
@@ -841,6 +854,51 @@ export const getActions = (instance) => {
           );
         });
         sendUDPRequestsSync(instance, requests);
+      },
+    },
+    // Save current screen brightness to the LED receiving card hardware (W0417)
+    // so the brightness setting persists across a power cycle.
+    save_brightness: {
+      name: 'Save Brightness',
+      description: 'Save the current screen brightness to the LED receiving card hardware so it survives a reboot.',
+      options: [
+        {
+          type: 'dropdown',
+          name: 'Screen',
+          label: 'Screen',
+          id: 'screenId',
+          default: screenListDropDown[0]?.id ?? null,
+          choices: screenListDropDown,
+        },
+      ],
+      callback: (event) => {
+        const screenId = event.options.screenId;
+        const command = handleParams(ACTIONS_CMD.save_screen_brightness, { screenId });
+        instance.safeSend(command);
+      },
+    },
+    // Global blackout (W0700). Distinct from per-screen FTB / black_screen —
+    // this affects every screen on the device at once.
+    blackout: {
+      name: 'Blackout (Global)',
+      description: 'Enable or disable a global blackout across every screen on the device. Distinct from per-screen FTB.',
+      options: [
+        {
+          type: 'dropdown',
+          name: 'State',
+          label: 'State',
+          id: 'state',
+          default: 1,
+          choices: [
+            { id: 1, label: 'Enable' },
+            { id: 0, label: 'Disable' },
+          ],
+        },
+      ],
+      callback: (event) => {
+        const state = parseInt(event.options.state);
+        const command = handleParams(ACTIONS_CMD.blackout, { blackout: state });
+        instance.safeSend(command);
       },
     },
   };

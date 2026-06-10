@@ -4,3 +4,9 @@ package-lock.json
 .cursor
 pkg.tgz
 pkg/
+# build artifacts
+*.tgz
+pkg/
+
+# macOS
+.DS_Store

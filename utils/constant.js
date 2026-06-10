@@ -51,8 +51,14 @@ export const ACTIONS_CMD = {
   osd_switch: 'W040C',
   /** 获取设备初始化状态 */
   get_device_init_status: 'R0118',
+  /** Get Device Details — returns slotList[] with cardType + iSignal per connector */
+  get_device_details: 'R0100',
   /** 设备心跳协议 */
   device_heartbeat: 'W0120',
+  /** Save current screen brightness to LED receiving card (per screen) */
+  save_screen_brightness: 'W0417',
+  /** Global blackout — affects all screens at once */
+  blackout: 'W0700',
 };
 
 export const SCREEN_COUNT_H = 40;
