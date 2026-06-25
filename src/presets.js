@@ -1,6 +1,13 @@
 import { combineRgb } from '@companion-module/base';
 import { MODULE_NAME, PGM_PVW_TYPE, TEST_PATTERN_TYPE } from '../utils/constant.js';
 
+const BLACK = combineRgb(0, 0, 0);
+const WHITE = combineRgb(255, 255, 255);
+const GREEN = combineRgb(0, 255, 0);
+const RED = combineRgb(255, 0, 0);
+const BLUE = combineRgb(0, 0, 255);
+const DARK_GREEN = combineRgb(0, 200, 0);
+
 /** 屏幕、图层、场景预设 */
 const getSLPPresets = (screenList) => {
   /** 选中屏幕 */
@@ -807,6 +814,317 @@ const getSourceListPresets = (instance) => {
   return sourceList;
 };
 
+/**
+ * Per-screen direct-control presets. One button per screen for each direct
+ * action (brightness, freeze, FTB, BKG, OSD text, OSD image, test pattern,
+ * PGM/PVW, Take). No select_screen prerequisite for the toggles that have a
+ * matching direct action; PGM/PVW, Take, and test pattern still funnel
+ * through select_screen since there is no `*_direct` action for those.
+ */
+const getDirectScreenPresets = (instance) => {
+  const out = {};
+  // 5% steps from 100 down to 0, matching the pre-split working branch.
+  const brightnessLevels = [100, 95, 90, 85, 80, 75, 70, 65, 60, 55, 50, 45, 40, 35, 30, 25, 20, 15, 10, 5, 0];
+
+  instance.screenList?.forEach((screen) => {
+    const { name, screenId } = screen;
+    const baseStyle = { size: 'auto', color: WHITE, bgcolor: BLACK };
+
+    // ---- Brightness +/- ----
+    out[`direct_bright_up_${screenId}`] = {
+      type: 'button',
+      category: 'Brightness',
+      name: `${name} Brightness +`,
+      style: { ...baseStyle, text: `$(${MODULE_NAME}:screenId_${screenId})\nBright +` },
+      steps: [{ down: [{ actionId: 'brightness_add_direct', options: { screenId } }], up: [] }],
+      feedbacks: [],
+    };
+    out[`direct_bright_down_${screenId}`] = {
+      type: 'button',
+      category: 'Brightness',
+      name: `${name} Brightness -`,
+      style: { ...baseStyle, text: `$(${MODULE_NAME}:screenId_${screenId})\nBright -` },
+      steps: [{ down: [{ actionId: 'brightness_minus_direct', options: { screenId } }], up: [] }],
+      feedbacks: [],
+    };
+
+    // ---- Brightness bar readout (graphical bar + numeric value) ----
+    // Info-only button: text shows the screen name and the live brightness
+    // variable, the brightness_bar feedback draws a horizontal progress bar
+    // along the bottom. Mirrors the Resolume progress-bar preset pattern.
+    out[`bright_bar_${screenId}`] = {
+      type: 'button',
+      category: 'Brightness',
+      name: `${name} Brightness Bar`,
+      style: {
+        ...baseStyle,
+        text: `$(${MODULE_NAME}:screenId_${screenId})\n$(${MODULE_NAME}:screen_${screenId + 1}_brightness)%`,
+      },
+      steps: [{ down: [], up: [] }],
+      feedbacks: [{ feedbackId: 'brightness_bar', options: { screenId, barColor: DARK_GREEN } }],
+    };
+
+    // ---- Brightness fixed levels (with brightness_match feedback) ----
+    brightnessLevels.forEach((pct) => {
+      out[`set_bright_${screenId}_${pct}`] = {
+        type: 'button',
+        category: 'Brightness',
+        name: `${name} Brightness ${pct}%`,
+        style: { ...baseStyle, text: `$(${MODULE_NAME}:screenId_${screenId})\n${pct}%` },
+        steps: [
+          {
+            down: [
+              { actionId: 'set_brightness', options: { screenId, brightness: String(pct) } },
+              // 100 ms wait so the splicer has time to apply the new
+              // brightness before we tell it to persist that value to the
+              // receiving card. Matches the delay that proved reliable in
+              // field testing.
+              { actionId: 'save_brightness', options: { screenId }, delay: 100 },
+            ],
+            up: [],
+          },
+        ],
+        feedbacks: [
+          {
+            feedbackId: 'brightness_match',
+            options: { screenId, value: pct },
+            style: { bgcolor: DARK_GREEN, color: WHITE },
+          },
+        ],
+      };
+    });
+
+    // ---- Freeze toggle ----
+    out[`direct_freeze_${screenId}`] = {
+      type: 'button',
+      category: 'Per-Screen Direct',
+      name: `${name} Freeze`,
+      style: { ...baseStyle, text: `$(${MODULE_NAME}:screenId_${screenId})\nFreeze` },
+      steps: [
+        { down: [{ actionId: 'freeze_direct', options: { screenId, state: 1 } }], up: [] },
+        { down: [{ actionId: 'freeze_direct', options: { screenId, state: 0 } }], up: [] },
+      ],
+      feedbacks: [
+        { feedbackId: 'frozen_direct', options: { screenId }, style: { bgcolor: BLUE, color: WHITE } },
+      ],
+    };
+
+    // ---- FTB toggle ----
+    out[`direct_ftb_${screenId}`] = {
+      type: 'button',
+      category: 'Per-Screen Direct',
+      name: `${name} FTB`,
+      style: { ...baseStyle, text: `$(${MODULE_NAME}:screenId_${screenId})\nFTB` },
+      steps: [
+        { down: [{ actionId: 'ftb_direct', options: { screenId, state: 1 } }], up: [] },
+        { down: [{ actionId: 'ftb_direct', options: { screenId, state: 0 } }], up: [] },
+      ],
+      feedbacks: [
+        { feedbackId: 'ftb_direct', options: { screenId }, style: { bgcolor: RED, color: WHITE } },
+      ],
+    };
+
+    // ---- BKG toggle ----
+    out[`direct_bkg_${screenId}`] = {
+      type: 'button',
+      category: 'Per-Screen Direct',
+      name: `${name} BKG`,
+      style: { ...baseStyle, text: `$(${MODULE_NAME}:screenId_${screenId})\nBKG` },
+      steps: [
+        { down: [{ actionId: 'bkg_direct', options: { screenId, state: 1 } }], up: [] },
+        { down: [{ actionId: 'bkg_direct', options: { screenId, state: 0 } }], up: [] },
+      ],
+      feedbacks: [
+        { feedbackId: 'bkg_direct', options: { screenId }, style: { bgcolor: GREEN, color: BLACK } },
+      ],
+    };
+
+    // ---- OSD Text toggle ----
+    out[`direct_osd_text_${screenId}`] = {
+      type: 'button',
+      category: 'Per-Screen Direct',
+      name: `${name} OSD Text`,
+      style: { ...baseStyle, text: `$(${MODULE_NAME}:screenId_${screenId})\nOSD Text` },
+      steps: [
+        { down: [{ actionId: 'osd_direct', options: { screenId, osdType: 'text', state: 1 } }], up: [] },
+        { down: [{ actionId: 'osd_direct', options: { screenId, osdType: 'text', state: 0 } }], up: [] },
+      ],
+      feedbacks: [
+        { feedbackId: 'osd_text_direct', options: { screenId }, style: { bgcolor: GREEN, color: BLACK } },
+      ],
+    };
+
+    // ---- OSD Image toggle ----
+    out[`direct_osd_image_${screenId}`] = {
+      type: 'button',
+      category: 'Per-Screen Direct',
+      name: `${name} OSD Image`,
+      style: { ...baseStyle, text: `$(${MODULE_NAME}:screenId_${screenId})\nOSD Img` },
+      steps: [
+        { down: [{ actionId: 'osd_direct', options: { screenId, osdType: 'image', state: 1 } }], up: [] },
+        { down: [{ actionId: 'osd_direct', options: { screenId, osdType: 'image', state: 0 } }], up: [] },
+      ],
+      feedbacks: [
+        { feedbackId: 'osd_image_direct', options: { screenId }, style: { bgcolor: GREEN, color: BLACK } },
+      ],
+    };
+
+    // ---- Test Pattern toggle ----
+    // No test_pattern_direct uses test_pattern_switch with select_screen,
+    // matching the pattern used in the pre-split working branch.
+    out[`direct_test_${screenId}`] = {
+      type: 'button',
+      category: 'Per-Screen Direct',
+      name: `${name} Test Pattern`,
+      style: { ...baseStyle, text: `$(${MODULE_NAME}:screenId_${screenId})\nTest` },
+      steps: [
+        {
+          down: [
+            { actionId: 'select_screen', options: { screenId, enable: 1 } },
+            { actionId: 'test_pattern_switch', options: { testPattern: TEST_PATTERN_TYPE.OPEN } },
+          ],
+          up: [],
+        },
+        {
+          down: [
+            { actionId: 'select_screen', options: { screenId, enable: 1 } },
+            { actionId: 'test_pattern_switch', options: { testPattern: TEST_PATTERN_TYPE.CLOSE } },
+          ],
+          up: [],
+        },
+      ],
+      feedbacks: [
+        { feedbackId: 'test_pattern_direct', options: { screenId }, style: { bgcolor: GREEN, color: BLACK } },
+      ],
+    };
+
+    // ---- Per-screen PGM/PVW (select-then-act, no direct action exists) ----
+    out[`direct_pgm_pvw_${screenId}`] = {
+      type: 'button',
+      category: 'Per-Screen Direct',
+      name: `${name} PGM/PVW`,
+      style: { ...baseStyle, text: `$(${MODULE_NAME}:screenId_${screenId})\nPGM/PVW`, size: '14' },
+      steps: [
+        {
+          down: [
+            { actionId: 'select_screen', options: { screenId, enable: 1 } },
+            { actionId: 'pgm_pvw_switch', options: { enNonTime: 0 } },
+          ],
+          up: [],
+        },
+        {
+          down: [
+            { actionId: 'select_screen', options: { screenId, enable: 1 } },
+            { actionId: 'pgm_pvw_switch', options: { enNonTime: 1 } },
+          ],
+          up: [],
+        },
+      ],
+      feedbacks: [
+        {
+          feedbackId: 'pgm_pvw_switch',
+          options: { type: PGM_PVW_TYPE.PGM },
+          style: { bgcolor: GREEN, color: BLACK, text: `$(${MODULE_NAME}:screenId_${screenId})\nPGM` },
+        },
+        {
+          feedbackId: 'pgm_pvw_switch',
+          options: { type: PGM_PVW_TYPE.PVW },
+          style: { bgcolor: RED, color: BLACK, text: `$(${MODULE_NAME}:screenId_${screenId})\nPVW` },
+        },
+      ],
+    };
+
+    // ---- Per-screen Take ----
+    out[`direct_take_${screenId}`] = {
+      type: 'button',
+      category: 'Per-Screen Direct',
+      name: `${name} Take`,
+      style: { ...baseStyle, text: `$(${MODULE_NAME}:screenId_${screenId})\nTake` },
+      steps: [
+        {
+          down: [
+            { actionId: 'select_screen', options: { screenId, enable: 1 } },
+            { actionId: 'take_switch', options: { manualPlay: 1 } },
+          ],
+          up: [],
+        },
+        {
+          down: [
+            { actionId: 'select_screen', options: { screenId, enable: 1 } },
+            { actionId: 'take_switch', options: { manualPlay: 0 } },
+          ],
+          up: [],
+        },
+      ],
+      feedbacks: [
+        { feedbackId: 'pvw_take_selected', style: { bgcolor: GREEN, color: BLACK } },
+      ],
+    };
+  });
+
+  return out;
+};
+
+/** Global blackout preset (wraps the W0700 blackout action). */
+const getGlobalBlackoutPreset = () => ({
+  blackout_global: {
+    type: 'button',
+    category: 'Display',
+    name: 'Blackout',
+    style: { text: 'BLACKOUT', size: 'auto', color: WHITE, bgcolor: BLACK },
+    steps: [
+      { down: [{ actionId: 'blackout', options: { state: 1 } }], up: [] },
+      { down: [{ actionId: 'blackout', options: { state: 0 } }], up: [] },
+    ],
+    feedbacks: [],
+  },
+});
+
+/**
+ * One status-button preset per real input connector. The set of connectors
+ * is derived from `inputSignalState` keys — populated by the optional input
+ * signal polling feature (separate PR #41). Each preset has no press action
+ * (the button is informational) and uses the `input_signal` feedback to
+ * turn green when iSignal=1.
+ *
+ * Gated on the inputSignalPolling toggle so this generator returns {} when
+ * the feature is off, when polling hasn't returned any data yet, or when
+ * the input_signal feedback isn't registered. That keeps this branch
+ * order-independent vs #41: if #41 isn't merged yet, no presets are
+ * generated and nothing breaks.
+ */
+const getInputSignalPresets = (instance) => {
+  if (!instance.config?.inputSignalPolling) return {};
+  const out = {};
+  const keys = Object.keys(instance.inputSignalState ?? {}).sort();
+  for (const inputKey of keys) {
+    const m = inputKey.match(/^input_(\d+)_(\d+)$/);
+    if (!m) continue;
+    const slot = m[1];
+    const conn = m[2];
+    out[`input_signal_${slot}_${conn}`] = {
+      type: 'button',
+      category: 'Input Signal',
+      name: `Input ${slot}-${conn} Signal`,
+      style: {
+        text: `In ${slot}-${conn}\n$(${MODULE_NAME}:${inputKey}_signal)`,
+        size: 'auto',
+        color: WHITE,
+        bgcolor: BLACK,
+      },
+      steps: [{ down: [], up: [] }],
+      feedbacks: [
+        {
+          feedbackId: 'input_signal',
+          options: { inputKey },
+          style: { bgcolor: GREEN, color: BLACK },
+        },
+      ],
+    };
+  }
+  return out;
+};
+
 export const getPresetDefinitions = function (instance) {
   // instance.log('info', JSON.stringify(instance.screenList));
   // instance.log('info', JSON.stringify(instance.sourceList));
@@ -818,5 +1136,8 @@ export const getPresetDefinitions = function (instance) {
     ...getPresetCollectionsPresets(instance),
     ...getSourceListPresets(instance),
     ...applyScreenPreset(),
+    ...getDirectScreenPresets(instance),
+    ...getGlobalBlackoutPreset(),
+    ...getInputSignalPresets(instance),
   };
 };
