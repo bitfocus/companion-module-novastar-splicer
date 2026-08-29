@@ -655,7 +655,25 @@ class ModuleInstance extends InstanceBase {
   }
   /** 处理屏幕列表 */
   dealScreenList(data) {
-    this.screenList = data.screens;
+    // Preserve existing layers/presets/details on each screen while replacing
+    // the rest of the screen record. R0400 carries only top-level screen
+    // fields (screenId, name, etc.); layers come from R0500, presets from
+    // R0600, and details from R0401. If we wipe screenList wholesale on
+    // every R0400, the layer/preset/screen-detail presets briefly vanish
+    // during each poll cycle until the dependent responses come back. The
+    // window is small at low poll rates but visible to operators on a slow
+    // network or once polling speeds up.
+    const prev = this.screenList ?? [];
+    const merged = (data.screens ?? []).map((newScreen) => {
+      const existing = prev.find((s) => s.screenId === newScreen.screenId);
+      return {
+        ...newScreen,
+        layers: newScreen.layers ?? existing?.layers ?? [],
+        presets: newScreen.presets ?? existing?.presets ?? [],
+        details: newScreen.details ?? existing?.details,
+      };
+    });
+    this.screenList = merged;
     data.screens.forEach((screen) => {
       getLayerList(this, screen.screenId);
       getPresetList(this, screen.screenId);
