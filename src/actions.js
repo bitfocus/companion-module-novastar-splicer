@@ -843,5 +843,50 @@ export const getActions = (instance) => {
         sendUDPRequestsSync(instance, requests);
       },
     },
+    // Save current screen brightness to the LED receiving card hardware (W0417)
+    // so the brightness setting persists across a power cycle.
+    save_brightness: {
+      name: 'Save Brightness',
+      description: 'Save the current screen brightness to the LED receiving card hardware so it survives a reboot.',
+      options: [
+        {
+          type: 'dropdown',
+          name: 'Screen',
+          label: 'Screen',
+          id: 'screenId',
+          default: screenListDropDown[0]?.id ?? null,
+          choices: screenListDropDown,
+        },
+      ],
+      callback: (event) => {
+        const screenId = event.options.screenId;
+        const command = handleParams(ACTIONS_CMD.save_screen_brightness, { screenId });
+        instance.safeSend(command);
+      },
+    },
+    // Global blackout (W0700). Distinct from per-screen FTB / black_screen —
+    // this affects every screen on the device at once.
+    blackout: {
+      name: 'Blackout (Global)',
+      description: 'Enable or disable a global blackout across every screen on the device. Distinct from per-screen FTB.',
+      options: [
+        {
+          type: 'dropdown',
+          name: 'State',
+          label: 'State',
+          id: 'state',
+          default: 1,
+          choices: [
+            { id: 1, label: 'Enable' },
+            { id: 0, label: 'Disable' },
+          ],
+        },
+      ],
+      callback: (event) => {
+        const state = parseInt(event.options.state);
+        const command = handleParams(ACTIONS_CMD.blackout, { blackout: state });
+        instance.safeSend(command);
+      },
+    },
   };
 };
