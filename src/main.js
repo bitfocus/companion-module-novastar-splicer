@@ -105,17 +105,49 @@ class ModuleInstance extends InstanceBase {
     };
   }
 
-  /** Update enhanced state from R0401 screen details response */
+  /**
+   * Update enhanced state from the R0401 apply_screen_details response.
+   *
+   * The device reports per-screen state in NESTED objects, not flat fields:
+   *   { brightness: 45,
+   *     Freeze:   { enable: 0|1 },
+   *     Ftb:      { enable: 0|1 },
+   *     Bkg:      { enable: 0|1, bkgId: N },
+   *     Osd:      { enable: 0|1 },        // screen text OSD
+   *     OsdImage: { enable: 0|1 } }
+   *
+   * The previous code read flat names (screenFrz, blackout, bkgEnable,
+   * textOsdEnable, imgOsdEnable) that do not exist in the payload, so the
+   * freeze / ftb / bkg / osd direct feedbacks never reconciled from device
+   * truth — they only reflected optimistic action presses. (Brightness was
+   * unaffected because `brightness` is a flat field.) This reads the real
+   * nested fields and redraws any direct feedback whose value changed, so a
+   * change made on the device front panel or another controller is reflected
+   * in Companion on the next poll.
+   */
   updateEnhancedFromDetails(screenId, details) {
     if (!this.enhancedState.screens[screenId]) this.initEnhancedScreen(screenId);
     const s = this.enhancedState.screens[screenId];
+    const before = { ...s };
     if (details.brightness !== undefined) s.brightness = details.brightness;
-    if (details.screenFrz !== undefined) s.frozen = details.screenFrz === 1;
-    // Protocol: blackout 0 = FTB enabled, 1 = FTB disabled (inverted)
-    if (details.blackout !== undefined) s.ftb = details.blackout === 0;
-    if (details.bkgEnable !== undefined) s.bkg = details.bkgEnable === 1;
-    if (details.textOsdEnable !== undefined) s.osdText = details.textOsdEnable === 1;
-    if (details.imgOsdEnable !== undefined) s.osdImage = details.imgOsdEnable === 1;
+    if (details.Freeze?.enable !== undefined) s.frozen = details.Freeze.enable === 1;
+    // FTB uses the INVERTED convention (known Novastar quirk): per protocol
+    // W0409 "Set Screen FTB", type 0 = FTB enabled, 1 = FTB disabled — the
+    // opposite of Freeze. So Ftb.enable === 0 means FTB is on.
+    if (details.Ftb?.enable !== undefined) s.ftb = details.Ftb.enable === 0;
+    if (details.Bkg?.enable !== undefined) s.bkg = details.Bkg.enable === 1;
+    if (details.Osd?.enable !== undefined) s.osdText = details.Osd.enable === 1;
+    if (details.OsdImage?.enable !== undefined) s.osdImage = details.OsdImage.enable === 1;
+
+    const changed = [];
+    if (before.brightness !== s.brightness) changed.push('brightness_match');
+    if (before.frozen !== s.frozen) changed.push('frozen_direct');
+    if (before.ftb !== s.ftb) changed.push('ftb_direct');
+    if (before.bkg !== s.bkg) changed.push('bkg_direct');
+    if (before.osdText !== s.osdText) changed.push('osd_text_direct');
+    if (before.osdImage !== s.osdImage) changed.push('osd_image_direct');
+    if (before.testPattern !== s.testPattern) changed.push('test_pattern_direct');
+    if (changed.length > 0) this.checkFeedbacks(...changed);
   }
 
   /** Optimistic update from action callback — instant variable + feedback refresh */
