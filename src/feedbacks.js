@@ -280,5 +280,49 @@ export const getFeedbacks = (instance) => {
         );
       },
     },
+    // Input signal feedback. Only registers when input signal polling is on
+    // in config, otherwise the feedback is unavailable in the UI (matches
+    // the variable-emission gate in main.js).
+    ...(instance.config?.inputSignalPolling
+      ? {
+          input_signal: {
+            type: 'boolean',
+            name: 'Input Signal Active',
+            description: 'True when the selected input connector has an active signal (R0100 slotList iSignal=1).',
+            defaultStyle: {
+              bgcolor: combineRgb(0, 200, 0),
+              color: combineRgb(255, 255, 255),
+            },
+            options: [
+              {
+                type: 'dropdown',
+                label: 'Input',
+                id: 'inputKey',
+                // Choices derived from inputSignalState (R0102-backed) so the
+                // dropdown matches the input_N_M_signal variables exactly. The
+                // R0226 sourceList uses a different field shape and isn't a
+                // reliable source for this enumeration.
+                default:
+                  (() => {
+                    const keys = Object.keys(instance.inputSignalState ?? {}).sort();
+                    return keys[0] ?? 'input_1_1';
+                  })(),
+                choices: (() => {
+                  const keys = Object.keys(instance.inputSignalState ?? {}).sort();
+                  if (keys.length === 0) {
+                    return [{ id: 'input_1_1', label: 'Input 1-1' }];
+                  }
+                  return keys.map((inputKey) => {
+                    const m = inputKey.match(/^input_(\d+)_(\d+)$/);
+                    const label = m ? `Input ${m[1]}-${m[2]}` : inputKey;
+                    return { id: inputKey, label };
+                  });
+                })(),
+              },
+            ],
+            callback: (event) => instance.inputSignalState[event.options.inputKey] === true,
+          },
+        }
+      : {}),
   };
 };
