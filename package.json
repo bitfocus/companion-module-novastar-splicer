@@ -4,8 +4,7 @@
 	"main": "./src/main.js",
 	"type": "module",
 	"scripts": {
-		"format": "prettier -w .",
-		"test": "node --test"
+		"format": "prettier -w ."
 	},
 	"license": "MIT",
 	"repository": {
